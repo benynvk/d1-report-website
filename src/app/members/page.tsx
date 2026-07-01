@@ -272,6 +272,7 @@ export default function MembersPage() {
         <MemberDetail
           memberId={selected.id}
           memberName={selected.name}
+          avatarUrl={selected.avatarUrl}
           onClose={() => setSelected(null)}
         />
       )}

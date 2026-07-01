@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyReport } from '@/lib/types';
+import { Avatar } from './Avatar';
 import { Loading } from './Spinner';
 
 const round = (n: number) => Math.round(n * 10) / 10;
 const sum = (r: DailyReport) => r.entries.reduce((s, e) => s + e.hours, 0);
+const PAGE = 10;
 
 function isoDaysAgo(days: number): string {
   return new Date(Date.now() + 7 * 3600 * 1000 - days * 86400000)
@@ -15,18 +17,21 @@ function isoDaysAgo(days: number): string {
     .slice(0, 10);
 }
 
-/** Popup listing a member's daily records (last 60 days). */
+/** Popup detail: a member's daily records (paged, last ~180 days). */
 export function MemberDetail({
   memberId,
   memberName,
+  avatarUrl,
   onClose,
 }: {
   memberId: string;
   memberName: string;
+  avatarUrl?: string | null;
   onClose: () => void;
 }) {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(PAGE);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -37,7 +42,7 @@ export function MemberDetail({
   useEffect(() => {
     setLoading(true);
     api
-      .listReports({ memberId, from: isoDaysAgo(60), to: isoDaysAgo(0) })
+      .listReports({ memberId, from: isoDaysAgo(180), to: isoDaysAgo(0) })
       .then(setReports)
       .catch(() => setReports([]))
       .finally(() => setLoading(false));
@@ -45,12 +50,17 @@ export function MemberDetail({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal modal-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-lg-head">
-          <h3>{memberName} — recent records</h3>
+          <div className="detail-identity">
+            <Avatar name={memberName} src={avatarUrl} size={48} />
+            <div>
+              <div className="detail-name">{memberName}</div>
+              <div className="muted" style={{ fontSize: 13 }}>
+                {reports.length} day(s) recorded
+              </div>
+            </div>
+          </div>
           <button className="btn ghost sm" onClick={onClose}>
             Close
           </button>
@@ -58,10 +68,11 @@ export function MemberDetail({
         {loading ? (
           <Loading />
         ) : reports.length === 0 ? (
-          <div className="empty">No records in the last 60 days.</div>
+          <div className="empty">No records yet.</div>
         ) : (
-          <div className="record-list">
-            {reports.map((r) => (
+          <>
+          <div className="record-list record-scroll">
+            {reports.slice(0, visible).map((r) => (
               <div className="record-day" key={r.id}>
                 <div className="record-day-head">
                   <span>{formatDate(r.date)}</span>
@@ -86,6 +97,16 @@ export function MemberDetail({
               </div>
             ))}
           </div>
+          {visible < reports.length && (
+            <button
+              className="btn ghost block"
+              style={{ marginTop: 14 }}
+              onClick={() => setVisible((v) => v + PAGE)}
+            >
+              Load more ({reports.length - visible} left)
+            </button>
+          )}
+          </>
         )}
       </div>
     </div>

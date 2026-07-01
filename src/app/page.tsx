@@ -12,6 +12,7 @@ import type { DailyOverview, SummaryResult } from '@/lib/types';
 interface SelectedMember {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 }
 
 const LOGO =
@@ -143,11 +144,26 @@ export default function HomePage() {
                   />
                 </div>
                 <div className="bar-col-label">
-                  <Avatar name={m.memberName} src={m.avatarUrl} size={30} />
+                  <span
+                    className="avatar-click"
+                    onClick={() =>
+                      setSelected({
+                        id: m.memberId,
+                        name: m.memberName,
+                        avatarUrl: m.avatarUrl,
+                      })
+                    }
+                  >
+                    <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
+                  </span>
                   <button
                     className="name-link"
                     onClick={() =>
-                      setSelected({ id: m.memberId, name: m.memberName })
+                      setSelected({
+                        id: m.memberId,
+                        name: m.memberName,
+                        avatarUrl: m.avatarUrl,
+                      })
                     }
                   >
                     {m.memberName}
@@ -181,6 +197,7 @@ export default function HomePage() {
         <MemberDetail
           memberId={selected.id}
           memberName={selected.name}
+          avatarUrl={selected.avatarUrl}
           onClose={() => setSelected(null)}
         />
       )}
@@ -216,11 +233,26 @@ function DayPanel({
             {data.members.map((m) => (
               <div className="yday-row" key={m.memberId}>
                 <span className="yday-name member-cell">
-                  <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
+                  <span
+                    className="avatar-click"
+                    onClick={() =>
+                      onSelect({
+                        id: m.memberId,
+                        name: m.memberName,
+                        avatarUrl: m.avatarUrl,
+                      })
+                    }
+                  >
+                    <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
+                  </span>
                   <button
                     className="name-link"
                     onClick={() =>
-                      onSelect({ id: m.memberId, name: m.memberName })
+                      onSelect({
+                        id: m.memberId,
+                        name: m.memberName,
+                        avatarUrl: m.avatarUrl,
+                      })
                     }
                   >
                     {m.memberName}
