@@ -67,8 +67,11 @@ export default function HomePage() {
       .finally(() => setDaysLoading(false));
   }, [tISO, yISO]);
 
-  const members = summary?.members ?? [];
-  const maxHours = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
+  const members = (summary?.members ?? []).map((m) => ({
+    ...m,
+    avgPerDay: m.daysReported ? m.totalHours / m.daysReported : 0,
+  }));
+  const maxAvg = members.reduce((m, x) => Math.max(m, x.avgPerDay), 0) || 1;
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -115,7 +118,7 @@ export default function HomePage() {
       {error && <div className="alert error">{error}</div>}
 
       <div className="panel" style={{ marginBottom: 22 }}>
-        <div className="panel-head">Hours by member</div>
+        <div className="panel-head">Average hours per working day</div>
         {chartLoading ? (
           <Loading />
         ) : members.length === 0 ? (
@@ -128,11 +131,11 @@ export default function HomePage() {
                 <div className="chart-track">
                   <div
                     className="chart-fill"
-                    style={{ width: `${(m.totalHours / maxHours) * 100}%` }}
+                    style={{ width: `${(m.avgPerDay / maxAvg) * 100}%` }}
                   />
                 </div>
                 <span className="chart-value">
-                  {round(m.totalHours)}h
+                  {round(m.avgPerDay)}h/day
                   <small>{m.daysReported}d</small>
                 </span>
               </div>
