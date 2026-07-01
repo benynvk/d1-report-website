@@ -147,7 +147,7 @@ export default function HomePage() {
                 <div className="bar-col-track">
                   <span
                     className="bar-col-value"
-                    style={{ bottom: `calc(${pct}% + 10px)` }}
+                    style={{ bottom: `calc(${pct}% + 7px)` }}
                   >
                     {round(m.avgPerDay)}h
                   </span>

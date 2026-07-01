@@ -891,8 +891,7 @@ label {
   height: 190px;
   display: flex;
   align-items: flex-end;
-  background: var(--primary-weak);
-  border-radius: 12px;
+  background: transparent;
 }
 .bar-col-fill {
   width: 100%;
@@ -1067,6 +1066,12 @@ label {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.entries .task-name a {
+  color: var(--text);
+}
+.entries .task-name a:hover {
+  color: var(--primary);
 }
 .entries .hours-pill {
   flex-shrink: 0;
