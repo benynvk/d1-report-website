@@ -98,7 +98,7 @@ export default function ImportPage() {
       <div className="row">
         <div className="col">
           <div className="field-row">
-            <div className="field" style={{ flex: 2 }}>
+            <div className="field" style={{ flex: 1, minWidth: 0 }}>
               <label>Member</label>
               <Select
                 value={memberId}
@@ -110,7 +110,7 @@ export default function ImportPage() {
                 }))}
               />
             </div>
-            <div className="field" style={{ flex: 1 }}>
+            <div className="field" style={{ width: 180, flexShrink: 0 }}>
               <label>Date</label>
               <input
                 type="date"
