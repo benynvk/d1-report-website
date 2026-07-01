@@ -368,6 +368,12 @@ a:hover {
   font-weight: 700;
   margin-bottom: 8px;
 }
+/* Match the task-hours pill's font exactly so both columns look pixel-aligned
+   (the head's bold 700 weight made same-width boxes look off by comparison). */
+.record-day-head .hours-pill {
+  font-size: 12px;
+  font-weight: 700;
+}
 
 /* Spinner */
 .spinner {
@@ -865,7 +871,7 @@ label {
   display: flex;
   align-items: flex-end;
   gap: 14px;
-  padding: 40px 24px 22px;
+  padding: 40px 24px 10px;
 }
 .clickable {
   cursor: pointer;
@@ -884,37 +890,68 @@ label {
   max-width: 100%;
 }
 
-/* Overlaid line charts */
+.chart-range {
+  text-align: center;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 700;
+  padding: 6px 0 4px;
+}
+.chart-range-arrow {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  top: -3px;
+}
+
+/* Overlaid line: total tasks across the chart */
 .bar-line-overlay {
   position: absolute;
   top: 40px;
   left: 24px;
   width: calc(100% - 48px);
-  height: 190px;
+  height: 260px;
   pointer-events: none;
   overflow: visible;
 }
-.line-hours,
 .line-tasks {
   fill: none;
+  stroke: #f59e0b;
   stroke-width: 2.5;
   vector-effect: non-scaling-stroke;
   stroke-linejoin: round;
   stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.line-hours {
-  stroke: #f59e0b;
+.line-tasks.grown {
+  stroke-dashoffset: 0;
 }
-.line-tasks {
-  stroke: #10b981;
+.line-labels {
+  position: absolute;
+  top: 40px;
+  left: 24px;
+  width: calc(100% - 48px);
+  height: 260px;
+  pointer-events: none;
 }
-.dot-hours {
-  fill: #f59e0b;
-  vector-effect: non-scaling-stroke;
+.line-label {
+  position: absolute;
+  transform: translate(-50%, -130%);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.6s;
 }
-.dot-tasks {
-  fill: #10b981;
-  vector-effect: non-scaling-stroke;
+.line-label.grown {
+  opacity: 1;
 }
 .chart-legend {
   display: flex;
@@ -941,11 +978,8 @@ label {
   height: 3px;
   border-radius: 2px;
 }
-.line-swatch.hours {
-  background: #f59e0b;
-}
 .line-swatch.tasks {
-  background: #10b981;
+  background: #f59e0b;
 }
 .bar-col {
   display: flex;
@@ -970,7 +1004,7 @@ label {
   position: relative;
   width: 100%;
   max-width: 150px;
-  height: 190px;
+  height: 260px;
   display: flex;
   align-items: flex-end;
   background: transparent;
@@ -1008,15 +1042,16 @@ label {
 }
 .bar-col-label {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
-  text-align: center;
-  max-width: 84px;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
 }
-.bar-col-label .name-link {
+.bar-col-label .name-link,
+.bar-col-label .bar-name {
   font-size: 13px;
-  max-width: 84px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1176,6 +1211,12 @@ label {
   border-radius: 999px;
   padding: 1px 9px;
   font-variant-numeric: tabular-nums;
+}
+/* Uniform-width hours pills so day-total and task hours line up in a column. */
+.record-day .hours-pill {
+  min-width: 52px;
+  text-align: right;
+  box-sizing: border-box;
 }
 .entries .no-name {
   color: var(--muted);

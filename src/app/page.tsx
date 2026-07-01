@@ -84,13 +84,10 @@ export default function HomePage() {
   }));
   const maxAvg = members.reduce((m, x) => Math.max(m, x.avgPerDay), 0) || 1;
   const maxTasks = members.reduce((m, x) => Math.max(m, x.taskCount), 0) || 1;
-  const maxTotal = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
   const N = members.length;
-  // Points for the overlaid line charts (viewBox 0..100, top-padded to 8).
   const px = (i: number) => ((i + 0.5) / N) * 100;
-  const py = (val: number, max: number) => 8 + (1 - val / max) * 84;
-  const tasksPts = members.map((m, i) => `${px(i)},${py(m.taskCount, maxTasks)}`);
-  const hoursPts = members.map((m, i) => `${px(i)},${py(m.totalHours, maxTotal)}`);
+  const py = (val: number) => 45 + (1 - val / maxTasks) * 50;
+  const tasksPts = members.map((m, i) => `${px(i)},${py(m.taskCount)}`);
 
   // Re-run the grow animation whenever the chart data changes.
   useEffect(() => {
@@ -144,6 +141,10 @@ export default function HomePage() {
       {error && <div className="alert error">{error}</div>}
 
       <div className="panel" style={{ marginBottom: 22, paddingTop: 8 }}>
+        <div className="chart-range">
+          {formatDate(from)} <span className="chart-range-arrow">→</span>{' '}
+          {formatDate(to)}
+        </div>
         {chartLoading ? (
           <Loading />
         ) : members.length === 0 ? (
@@ -160,16 +161,16 @@ export default function HomePage() {
                     avatarUrl: m.avatarUrl,
                   });
                 return (
-                  <div className="bar-col clickable" key={m.memberId} onClick={open}>
+                  <div className="bar-col" key={m.memberId}>
                     <div className="bar-col-track">
                       <span
                         className="bar-col-value"
                         style={{
-                          bottom: `calc(${grown ? pct : 0}% + 7px)`,
+                          bottom: `calc(${grown ? pct : 0}% + 4px)`,
                           transitionDelay: `${i * 60}ms`,
                         }}
                       >
-                        {round(m.avgPerDay)}h
+                        {round(m.avgPerDay)}
                       </span>
                       <div
                         className="bar-col-fill"
@@ -179,29 +180,43 @@ export default function HomePage() {
                         }}
                       />
                     </div>
-                    <div className="bar-col-label">
+                    <div className="bar-col-label clickable" onClick={open}>
                       <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
                       <span className="bar-name">{m.memberName}</span>
                     </div>
                   </div>
                 );
               })}
-              {/* Overlaid line charts: tasks & total hours */}
+              {/* Overlaid line: total tasks per member across the range */}
               <svg
                 className="bar-line-overlay"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
-                <polyline className="line-hours" points={hoursPts.join(' ')} />
-                <polyline className="line-tasks" points={tasksPts.join(' ')} />
+                <polyline
+                  className={`line-tasks${grown ? ' grown' : ''}`}
+                  points={tasksPts.join(' ')}
+                  pathLength={100}
+                />
               </svg>
+              <div className="line-labels">
+                {members.map((m, i) => (
+                  <span
+                    key={m.memberId}
+                    className={`line-label${grown ? ' grown' : ''}`}
+                    style={{
+                      left: `${px(i)}%`,
+                      top: `${py(m.taskCount)}%`,
+                    }}
+                  >
+                    {m.taskCount}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="chart-legend">
               <span className="legend-item">
                 <span className="bar-swatch" /> Avg working hours/day
-              </span>
-              <span className="legend-item">
-                <span className="line-swatch hours" /> Total hours
               </span>
               <span className="legend-item">
                 <span className="line-swatch tasks" /> Total tasks

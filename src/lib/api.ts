@@ -35,8 +35,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(message);
   }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  // DELETE/PATCH handlers may return an empty body with a 200/204 status —
+  // parse as JSON only when there's actually content, regardless of status code.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 const qs = (params: Record<string, string | undefined>) => {
