@@ -23,7 +23,7 @@ const round = (n: number) => Math.round(n * 10) / 10;
 // Line-chart reveal timing: wait for bars to grow, then connect points one at
 // a time (must match the .line-tasks transition-duration in CSS).
 const LINE_BASE_DELAY = 650;
-const LINE_SEGMENT_MS = 300;
+const LINE_SEGMENT_MS = 150;
 
 /** Local (VN, UTC+7) date string 'YYYY-MM-DD' for `daysAgo` days back. */
 function isoDaysAgo(days: number): string {

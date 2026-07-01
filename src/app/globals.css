@@ -924,7 +924,7 @@ label {
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset 0.3s linear;
+  transition: stroke-dashoffset 0.15s linear;
 }
 .line-tasks.grown {
   stroke-dashoffset: 0;
