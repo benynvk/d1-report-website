@@ -14,7 +14,8 @@ export interface Member {
   avatarUrl: string | null;
   isSupport: boolean;
   wipName: string | null;
-  active: boolean;
+  teamworkEmail: string | null;
+  autoWip: boolean;
   createdAt: string;
 }
 
