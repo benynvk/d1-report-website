@@ -254,6 +254,43 @@ a:hover {
   color: var(--primary);
   font-weight: 600;
 }
+.select-opt-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Custom date field (shows dd/mm/yyyy, native picker underneath) */
+.date-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  min-width: 140px;
+}
+.date-field:hover {
+  border-color: var(--primary);
+}
+.date-field svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.date-field-native {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 100%;
+  border: none;
+  padding: 0;
+}
 
 /* Modal / confirm dialog */
 .modal-overlay {
@@ -461,6 +498,33 @@ a:hover {
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
+.filter-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-inline label {
+  margin: 0;
+  white-space: nowrap;
+}
+td.mid {
+  vertical-align: middle;
+}
+th.c,
+td.c {
+  text-align: center;
+}
+.page-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 20px;
+}
+.page-head-row .toolbar {
+  gap: 18px;
+}
 
 /* Cards */
 .cards {
@@ -602,6 +666,19 @@ label {
 }
 .field {
   margin-bottom: 14px;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.checkbox-row input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 .field-row {
   display: flex;
@@ -782,28 +859,30 @@ label {
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
-  gap: 20px;
-  padding: 24px 24px;
+  gap: 16px;
+  padding: 26px 24px 22px;
   overflow-x: auto;
 }
 .bar-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
-  min-width: 80px;
-  max-width: 140px;
+  min-width: 72px;
+  max-width: 120px;
 }
 .bar-col-value {
   font-weight: 700;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  margin-bottom: 2px;
 }
 .bar-col-track {
   width: 100%;
-  max-width: 72px;
-  height: 190px;
+  max-width: 52px;
+  height: 150px;
   display: flex;
   align-items: flex-end;
   background: var(--primary-weak);
@@ -813,8 +892,8 @@ label {
 .bar-col-fill {
   width: 100%;
   background: linear-gradient(180deg, var(--primary), var(--btn-primary-bg));
-  border-radius: 8px 8px 0 0;
-  min-height: 3px;
+  border-radius: 10px;
+  min-height: 4px;
   transition: height 0.4s ease;
 }
 .bar-col-label {
@@ -835,6 +914,11 @@ label {
 .bar-col-days {
   font-size: 11px;
   color: var(--muted);
+}
+.bar-col-meta {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 /* Horizontal bar chart (legacy) */
@@ -896,6 +980,7 @@ label {
   gap: 16px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
+  align-items: flex-start;
 }
 .yday-row:last-child {
   border-bottom: none;

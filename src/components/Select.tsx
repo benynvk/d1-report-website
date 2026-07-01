@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 export interface SelectOption {
   value: string;
   label: string;
+  icon?: React.ReactNode;
 }
 
 export function Select({
@@ -46,7 +47,10 @@ export function Select({
         className={`select-btn${selected ? '' : ' placeholder'}`}
         onClick={() => setOpen((o) => !o)}
       >
-        {selected ? selected.label : placeholder}
+        <span className="select-opt-inner">
+          {selected?.icon}
+          {selected ? selected.label : placeholder}
+        </span>
       </button>
       {open && (
         <div className="select-menu" role="listbox">
@@ -72,7 +76,10 @@ export function Select({
                 setOpen(false);
               }}
             >
-              {o.label}
+              <span className="select-opt-inner">
+                {o.icon}
+                {o.label}
+              </span>
             </div>
           ))}
         </div>

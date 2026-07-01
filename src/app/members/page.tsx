@@ -13,6 +13,7 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [isSupport, setIsSupport] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -42,6 +43,10 @@ export default function MembersPage() {
     }
   };
 
+  // In-place state update so toggles/avatar don't reload (and re-spinner) the list.
+  const patchMember = (id: string, patch: Partial<Member>) =>
+    setMembers((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+
   const add = async () => {
     setError('');
     if (!name.trim() || !email.trim()) {
@@ -50,15 +55,19 @@ export default function MembersPage() {
     }
     setSaving(true);
     try {
-      await api.createMember({
+      const created = await api.createMember({
         name: name.trim(),
         email: email.trim(),
         avatarUrl: avatar,
+        isSupport,
       });
+      setMembers((ms) =>
+        [...ms, created].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       setName('');
       setEmail('');
       setAvatar(null);
-      load();
+      setIsSupport(false);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -70,18 +79,31 @@ export default function MembersPage() {
     if (!file) return;
     try {
       const dataUrl = await resizeImage(file, 300);
+      patchMember(memberId, { avatarUrl: dataUrl }); // optimistic
       await api.updateMember(memberId, { avatarUrl: dataUrl });
-      load();
     } catch (e: any) {
       setError(e.message);
     }
   };
 
   const toggleActive = async (m: Member) => {
+    const next = !m.active;
+    patchMember(m.id, { active: next }); // optimistic
     try {
-      await api.updateMember(m.id, { active: !m.active });
-      load();
+      await api.updateMember(m.id, { active: next });
     } catch (e: any) {
+      patchMember(m.id, { active: m.active }); // revert
+      setError(e.message);
+    }
+  };
+
+  const toggleSupport = async (m: Member) => {
+    const next = !m.isSupport;
+    patchMember(m.id, { isSupport: next }); // optimistic
+    try {
+      await api.updateMember(m.id, { isSupport: next });
+    } catch (e: any) {
+      patchMember(m.id, { isSupport: m.isSupport }); // revert
       setError(e.message);
     }
   };
@@ -97,7 +119,7 @@ export default function MembersPage() {
     if (!ok) return;
     try {
       await api.deleteMember(m.id);
-      load();
+      setMembers((ms) => ms.filter((x) => x.id !== m.id));
     } catch (e: any) {
       setError(e.message);
     }
@@ -164,6 +186,14 @@ export default function MembersPage() {
                   style={{ width: '100%' }}
                 />
               </div>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={isSupport}
+                  onChange={(e) => setIsSupport(e.target.checked)}
+                />
+                <span>Support member (skip daily reminders)</span>
+              </label>
               <button className="btn block" onClick={add} disabled={saving}>
                 {saving ? (
                   <span className="btn-spin">
@@ -190,6 +220,7 @@ export default function MembersPage() {
                   <tr>
                     <th>Name</th>
                     <th>Email</th>
+                    <th className="c">Supporter</th>
                     <th>Status</th>
                     <th></th>
                   </tr>
@@ -218,6 +249,14 @@ export default function MembersPage() {
                         </div>
                       </td>
                       <td>{m.email}</td>
+                      <td className="c mid">
+                        <input
+                          type="checkbox"
+                          checked={m.isSupport}
+                          onChange={() => toggleSupport(m)}
+                          style={{ width: 16, height: 16, cursor: 'pointer' }}
+                        />
+                      </td>
                       <td>
                         {m.active ? (
                           <span className="badge ok">Active</span>

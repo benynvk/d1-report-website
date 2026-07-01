@@ -5,6 +5,8 @@ import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { Spinner } from '@/components/Spinner';
 import { useConfirm } from '@/components/Confirm';
+import { Avatar } from '@/components/Avatar';
+import { DateField } from '@/components/DateField';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { Member, PreviewResult, ReportConfig } from '@/lib/types';
 
@@ -144,17 +146,15 @@ export default function ImportPage() {
                 options={members.map((m) => ({
                   value: m.id,
                   label: `${m.name} (${m.email})`,
+                  icon: <Avatar name={m.name} src={m.avatarUrl} size={20} />,
                 }))}
               />
             </div>
-            <div className="field" style={{ width: 180, flexShrink: 0 }}>
+            <div className="field" style={{ flexShrink: 0 }}>
               <label>Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                style={{ width: '100%' }}
-              />
+              <div>
+                <DateField value={date} onChange={setDate} />
+              </div>
             </div>
           </div>
           <div className="field">

@@ -12,6 +12,7 @@ export interface Member {
   email: string;
   chatUserId: string | null;
   avatarUrl: string | null;
+  isSupport: boolean;
   active: boolean;
   createdAt: string;
 }
@@ -55,6 +56,7 @@ export interface MemberDayStat {
   memberId: string;
   memberName: string;
   avatarUrl: string | null;
+  isSupport: boolean;
   status: AttendanceStatus | null;
   reported: boolean;
   totalHours: number;
@@ -106,6 +108,7 @@ export interface SummaryResult {
     memberName: string;
     avatarUrl: string | null;
     totalHours: number;
+    taskCount: number;
     daysReported: number;
   }[];
 }

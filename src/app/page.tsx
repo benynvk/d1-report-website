@@ -6,6 +6,7 @@ import { Loading } from '@/components/Spinner';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
+import { DateField } from '@/components/DateField';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyOverview, SummaryResult } from '@/lib/types';
 
@@ -105,21 +106,19 @@ export default function HomePage() {
             </button>
           ))}
         </div>
-        <input
-          type="date"
+        <DateField
           value={from}
-          onChange={(e) => {
+          onChange={(v) => {
             setPreset(0);
-            setFrom(e.target.value);
+            setFrom(v);
           }}
         />
         <span className="muted">→</span>
-        <input
-          type="date"
+        <DateField
           value={to}
-          onChange={(e) => {
+          onChange={(v) => {
             setPreset(0);
-            setTo(e.target.value);
+            setTo(v);
           }}
         />
       </div>
@@ -168,7 +167,9 @@ export default function HomePage() {
                   >
                     {m.memberName}
                   </button>
-                  <span className="bar-col-days">{m.daysReported}d</span>
+                  <span className="bar-col-meta">
+                    {m.taskCount} tasks · {round(m.totalHours)}h
+                  </span>
                 </div>
               </div>
             ))}
@@ -178,16 +179,16 @@ export default function HomePage() {
 
       <div className="row">
         <DayPanel
-          title="Today"
-          date={tISO}
-          data={today}
+          title="Yesterday"
+          date={yISO}
+          data={yesterday}
           loading={daysLoading}
           onSelect={setSelected}
         />
         <DayPanel
-          title="Yesterday"
-          date={yISO}
-          data={yesterday}
+          title="Today"
+          date={tISO}
+          data={today}
           loading={daysLoading}
           onSelect={setSelected}
         />
@@ -262,7 +263,11 @@ function DayPanel({
                   {m.status === 'holiday' ? (
                     <span className="badge holiday">Holiday</span>
                   ) : !m.reported ? (
-                    <span className="badge pending">Not reported</span>
+                    m.isSupport ? (
+                      <span className="badge">Support</span>
+                    ) : (
+                      <span className="badge pending">Not reported</span>
+                    )
                   ) : (
                     <ul className="entries">
                       {m.entries.map((e, i) => (

@@ -56,6 +56,7 @@ export const api = {
     name: string;
     email: string;
     avatarUrl?: string | null;
+    isSupport?: boolean;
   }) =>
     request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>
