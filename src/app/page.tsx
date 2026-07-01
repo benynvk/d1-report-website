@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -32,7 +32,8 @@ export default function HomePage() {
   const [summary, setSummary] = useState<SummaryResult | null>(null);
   const [today, setToday] = useState<DailyOverview | null>(null);
   const [yesterday, setYesterday] = useState<DailyOverview | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [chartLoading, setChartLoading] = useState(true);
+  const [daysLoading, setDaysLoading] = useState(true);
   const [error, setError] = useState('');
 
   const tISO = useMemo(() => isoDaysAgo(0), []);
@@ -44,22 +45,27 @@ export default function HomePage() {
     setTo(isoDaysAgo(0));
   };
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError('');
-    Promise.all([api.summary(from, to), api.daily(tISO), api.daily(yISO)])
-      .then(([s, t, y]) => {
-        setSummary(s);
+  // Chart depends on the selected range.
+  useEffect(() => {
+    setChartLoading(true);
+    api
+      .summary(from, to)
+      .then(setSummary)
+      .catch((e) => setError(e.message))
+      .finally(() => setChartLoading(false));
+  }, [from, to]);
+
+  // Today / Yesterday are independent of the range — load once.
+  useEffect(() => {
+    setDaysLoading(true);
+    Promise.all([api.daily(tISO), api.daily(yISO)])
+      .then(([t, y]) => {
         setToday(t);
         setYesterday(y);
       })
       .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [from, to, tISO, yISO]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+      .finally(() => setDaysLoading(false));
+  }, [tISO, yISO]);
 
   const members = summary?.members ?? [];
   const maxHours = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
@@ -110,7 +116,7 @@ export default function HomePage() {
 
       <div className="panel" style={{ marginBottom: 22 }}>
         <div className="panel-head">Hours by member</div>
-        {loading ? (
+        {chartLoading ? (
           <Loading />
         ) : members.length === 0 ? (
           <div className="empty">No reports in this range.</div>
@@ -136,12 +142,12 @@ export default function HomePage() {
       </div>
 
       <div className="row">
-        <DayPanel title="Today" date={tISO} data={today} loading={loading} />
+        <DayPanel title="Today" date={tISO} data={today} loading={daysLoading} />
         <DayPanel
           title="Yesterday"
           date={yISO}
           data={yesterday}
-          loading={loading}
+          loading={daysLoading}
         />
       </div>
     </div>

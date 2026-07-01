@@ -772,10 +772,15 @@ label {
 .entries li {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+}
+.entries li::before {
+  content: '•';
+  color: var(--muted);
+  flex-shrink: 0;
 }
 .entries .task-name {
+  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
