@@ -147,6 +147,18 @@ export default function MembersPage() {
     }
   };
 
+  const saveChatUserId = async (m: Member, value: string) => {
+    const next = value.trim();
+    if (next === (m.chatUserId ?? '')) return;
+    patchMember(m.id, { chatUserId: next || null }); // optimistic
+    try {
+      await api.updateMember(m.id, { chatUserId: next });
+    } catch (e: any) {
+      patchMember(m.id, { chatUserId: m.chatUserId }); // revert
+      setError(e.message);
+    }
+  };
+
   const remove = async (m: Member) => {
     const ok = await confirm({
       title: `Delete ${m.name}?`,
@@ -175,7 +187,7 @@ export default function MembersPage() {
           </p>
         </div>
         <button className="btn" onClick={() => setShowAdd(true)}>
-          + Add member
+          + Add
         </button>
       </div>
 
@@ -188,13 +200,14 @@ export default function MembersPage() {
         ) : members.length === 0 ? (
           <div className="empty">No members yet.</div>
         ) : (
-          <table style={{ minWidth: 920 }}>
+          <table style={{ minWidth: 1080 }}>
             <thead>
               <tr>
                 <th className="c">Name</th>
                 <th className="c">Email</th>
                 <th className="c">Teamwork email</th>
                 <th className="c">WIP name</th>
+                <th className="c">Chat ID</th>
                 <th className="c">Auto WIP</th>
                 <th className="c">Supporter</th>
                 <th className="c"></th>
@@ -236,6 +249,15 @@ export default function MembersPage() {
                       defaultValue={m.wipName ?? ''}
                       onBlur={(e) => saveWipName(m, e.target.value)}
                       style={{ width: '100%', minWidth: 160 }}
+                    />
+                  </td>
+                  <td className="mid">
+                    <input
+                      key={m.id}
+                      defaultValue={m.chatUserId ?? ''}
+                      placeholder="users/1234567890"
+                      onBlur={(e) => saveChatUserId(m, e.target.value)}
+                      style={{ width: '100%', minWidth: 170 }}
                     />
                   </td>
                   <td className="c mid">
