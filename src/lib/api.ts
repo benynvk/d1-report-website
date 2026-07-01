@@ -125,13 +125,6 @@ export const api = {
   summary: (from: string, to: string) =>
     request<SummaryResult>(`/stats/summary${qs({ from, to })}`),
 
-  // Reminders
-  runReminder: (date?: string) =>
-    request<{ date: string; missing: string[] }>(
-      `/reminders/run${qs({ date })}`,
-      { method: 'POST' },
-    ),
-
   // WIP
   wipStatus: () => request<WipStatus>('/wip/status'),
   wipDisconnect: () => request<void>('/wip/disconnect', { method: 'POST' }),
