@@ -78,9 +78,6 @@ export function MemberDetail({
               </div>
             </div>
           </div>
-          <button className="btn ghost sm" onClick={onClose}>
-            Close
-          </button>
         </div>
         {loading ? (
           <Loading />

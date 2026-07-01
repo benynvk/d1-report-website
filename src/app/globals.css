@@ -889,7 +889,7 @@ label {
   position: absolute;
   top: 40px;
   left: 24px;
-  right: 24px;
+  width: calc(100% - 48px);
   height: 190px;
   pointer-events: none;
   overflow: visible;

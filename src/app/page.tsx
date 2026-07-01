@@ -177,13 +177,7 @@ export default function HomePage() {
                           height: `${grown ? pct : 0}%`,
                           transitionDelay: `${i * 60}ms`,
                         }}
-                      >
-                        <span className="bar-col-onbar">
-                          {m.taskCount} tasks
-                          <br />
-                          {round(m.totalHours)}h
-                        </span>
-                      </div>
+                      />
                     </div>
                     <div className="bar-col-label">
                       <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
