@@ -63,16 +63,17 @@ export default function HomePage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <div className="home-header">
+      <div className="home-hero">
+        <div className="home-hero-toggle">
+          <ThemeToggle />
+        </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={LOGO} alt="D1 Training" className="brand-logo" />
-        <ThemeToggle />
+        <img src={LOGO} alt="D1 Training" className="brand-logo home-logo" />
+        <h1 className="home-title">Team Workload</h1>
+        <p className="page-sub">
+          Reported hours per member for the selected range.
+        </p>
       </div>
-
-      <h1 className="page-title">Team Workload</h1>
-      <p className="page-sub">
-        Reported hours per member for the selected range.
-      </p>
 
       <div className="toolbar">
         <div className="preset-group">
