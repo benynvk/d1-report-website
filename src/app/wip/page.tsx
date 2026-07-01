@@ -153,9 +153,17 @@ function WipPageInner() {
                   <p className="muted" style={{ marginTop: 0 }}>
                     Connected as <strong>{status.email}</strong>
                   </p>
-                  <button className="btn danger" onClick={disconnect}>
-                    Disconnect
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn ghost" onClick={connect}>
+                      Reconnect
+                    </button>
+                    <button className="btn danger" onClick={disconnect}>
+                      Disconnect
+                    </button>
+                  </div>
+                  <div className="hint">
+                    Reconnect after permissions change (e.g. read → write access).
+                  </div>
                 </>
               ) : (
                 <>

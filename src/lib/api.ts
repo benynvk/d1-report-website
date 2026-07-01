@@ -63,6 +63,8 @@ export const api = {
     avatarUrl?: string | null;
     isSupport?: boolean;
     wipName?: string | null;
+    teamworkEmail?: string;
+    autoWip?: boolean;
   }) =>
     request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>
