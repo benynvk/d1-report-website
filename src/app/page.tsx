@@ -118,7 +118,7 @@ export default function HomePage() {
         <h1 className="home-title">Workload Dashboard</h1>
       </div>
 
-      <div className="toolbar" style={{ justifyContent: 'flex-end' }}>
+      <div className="toolbar home-toolbar">
         <div className="preset-group">
           {PRESETS.map((p) => (
             <button
@@ -195,6 +195,7 @@ export default function HomePage() {
                       <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
                       <span className="bar-name">{m.memberName}</span>
                     </div>
+                    <span className="bar-mobile-tasks">{m.taskCount} tasks</span>
                   </div>
                 );
               })}

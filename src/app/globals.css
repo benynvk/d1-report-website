@@ -462,6 +462,88 @@ a:hover {
     padding: 9px 12px;
   }
 }
+
+/* Home dashboard on mobile */
+@media (max-width: 700px) {
+  .home-toolbar {
+    justify-content: center;
+  }
+  .date-range {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .chart-range {
+    font-size: 16px;
+  }
+
+  /* Give bars a fixed minimum width and scroll horizontally instead of
+     squeezing everything into one screen (which hid names/avatars). */
+  .bar-chart {
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 18px;
+    padding: 30px 16px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bar-col {
+    flex: 0 0 auto;
+    width: 72px;
+  }
+  .bar-col-track {
+    height: 190px;
+    max-width: 100%;
+  }
+  .bar-col-value {
+    font-size: 12px;
+  }
+  .bar-line-overlay,
+  .line-labels {
+    display: none; /* the overlay assumes the flexed (non-scrolling) width */
+  }
+  .bar-mobile-tasks {
+    display: block; /* replaces the line-chart task count on mobile */
+  }
+
+  /* Avatar + name stack vertically so the avatar centers under its bar. */
+  .bar-col-label {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bar-col-label .avatar {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+  }
+  .bar-name {
+    max-width: 72px;
+    font-size: 11px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .chart-legend {
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .yday-name {
+    width: 64px;
+  }
+
+  /* Filter bars on other pages (Reports/Import): stack instead of crowding. */
+  .page-head-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-head-row .toolbar {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .filter-inline {
+    flex-wrap: wrap;
+  }
+}
 .nav-link {
   display: block;
   padding: 9px 12px;
@@ -503,6 +585,9 @@ a:hover {
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 18px;
+}
+.home-toolbar {
+  justify-content: flex-end;
 }
 .filter-inline {
   display: flex;
@@ -888,6 +973,11 @@ label {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+.bar-mobile-tasks {
+  display: none;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .chart-range {
