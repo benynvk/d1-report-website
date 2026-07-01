@@ -69,10 +69,7 @@ export default function HomePage() {
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={LOGO} alt="D1 Training" className="brand-logo home-logo" />
-        <h1 className="home-title">Team Workload</h1>
-        <p className="page-sub">
-          Reported hours per member for the selected range.
-        </p>
+        <h1 className="home-title">Workload Dashboard</h1>
       </div>
 
       <div className="toolbar">
