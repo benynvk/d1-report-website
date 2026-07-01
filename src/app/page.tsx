@@ -131,7 +131,7 @@ export default function HomePage() {
         <div className="panel-head">
           Average working hours per day
           <span className="muted" style={{ fontWeight: 400, marginLeft: 8 }}>
-            {formatDate(from)} → {formatDate(to)}
+            ({formatDate(from)} → {formatDate(to)})
           </span>
         </div>
         {chartLoading ? (
