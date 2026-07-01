@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { Loading } from '@/components/Spinner';
 import { useConfirm } from '@/components/Confirm';
+import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 function daysAgo(n: number): string {
@@ -107,7 +108,7 @@ export default function ReportsPage() {
             <tbody>
               {reports.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.date}</td>
+                  <td>{formatDate(r.date)}</td>
                   <td style={{ fontWeight: 600 }}>{r.member.name}</td>
                   <td className="num">{round(sum(r))}h</td>
                   <td>
@@ -116,10 +117,10 @@ export default function ReportsPage() {
                         <li key={e.id}>
                           {e.href ? (
                             <a href={e.href} target="_blank" rel="noreferrer">
-                              {e.taskName}
+                              {taskLabel(e)}
                             </a>
                           ) : (
-                            e.taskName
+                            taskLabel(e)
                           )}
                           <span className="muted"> — {e.hours}h</span>
                         </li>

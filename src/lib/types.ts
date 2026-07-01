@@ -20,6 +20,7 @@ export interface ReportEntry {
   taskName: string;
   hours: number;
   href: string | null;
+  resolvedTitle: string | null;
   position: number;
 }
 
@@ -57,7 +58,12 @@ export interface MemberDayStat {
   totalHours: number;
   taskCount: number;
   utilization: number;
-  entries: { taskName: string; hours: number; href: string | null }[];
+  entries: {
+    taskName: string;
+    hours: number;
+    href: string | null;
+    resolvedTitle: string | null;
+  }[];
 }
 
 export interface DailyOverview {

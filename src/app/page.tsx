@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
+import { taskLabel } from '@/lib/format';
 import type { AttendanceStatus, DailyOverview } from '@/lib/types';
 
 function today(): string {
@@ -150,10 +151,10 @@ export default function DashboardPage() {
                           <li key={i}>
                             {e.href ? (
                               <a href={e.href} target="_blank" rel="noreferrer">
-                                {e.taskName}
+                                {taskLabel(e)}
                               </a>
                             ) : (
-                              e.taskName
+                              taskLabel(e)
                             )}
                             <span className="muted"> — {e.hours}h</span>
                           </li>

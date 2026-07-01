@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { Spinner } from '@/components/Spinner';
+import { useConfirm } from '@/components/Confirm';
+import { formatDate, taskLabel } from '@/lib/format';
 import type { Member, PreviewResult, ReportConfig } from '@/lib/types';
 
 function today(): string {
@@ -24,6 +26,7 @@ export default function ImportPage() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [saving, setSaving] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     api.listMembers().then(setMembers).catch((e) => setError(e.message));
@@ -50,12 +53,27 @@ export default function ImportPage() {
   const submit = async () => {
     setError('');
     setOk('');
+    // One report per member per day — confirm before overwriting.
+    try {
+      const existing = await api.listReports({ date, memberId });
+      if (existing.length > 0) {
+        const ok = await confirm({
+          title: 'Report already exists',
+          message: `${existing[0].member.name} already has a report on ${formatDate(date)}. Overwrite it?`,
+          confirmLabel: 'Overwrite',
+          danger: true,
+        });
+        if (!ok) return;
+      }
+    } catch {
+      /* if the check fails, fall through and let the save attempt surface it */
+    }
     setSaving(true);
     try {
       const report = await api.importReport({ memberId, date, text });
       const total = report.entries.reduce((s, e) => s + e.hours, 0);
       setOk(
-        `Saved ${report.entries.length} tasks (${total}h) for ${report.member.name} on ${report.date}.`,
+        `Saved ${report.entries.length} tasks (${total}h) for ${report.member.name} on ${formatDate(report.date)}.`,
       );
       setText('');
       setPreview(null);
@@ -151,10 +169,10 @@ export default function ImportPage() {
                       <td>
                         {e.href ? (
                           <a href={e.href} target="_blank" rel="noreferrer">
-                            {e.taskName}
+                            {taskLabel(e)}
                           </a>
                         ) : (
-                          e.taskName
+                          taskLabel(e)
                         )}
                       </td>
                       <td className="num">{e.hours}</td>
