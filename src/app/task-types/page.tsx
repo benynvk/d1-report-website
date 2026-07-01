@@ -110,7 +110,7 @@ export default function TaskTypesPage() {
                   {types.map((t) => (
                     <tr key={t.id}>
                       <td style={{ fontWeight: 600 }}>{t.label}</td>
-                      <td>
+                      <td style={{ textAlign: 'right' }}>
                         <button
                           className="btn danger sm"
                           onClick={() => remove(t)}

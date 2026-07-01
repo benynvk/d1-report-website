@@ -331,6 +331,11 @@ a:hover {
   display: flex;
   flex-direction: column;
 }
+.modal-xl {
+  max-width: 960px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
 .modal-lg-head {
   display: flex;
   align-items: center;
@@ -545,7 +550,9 @@ a:hover {
   }
 }
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 9px 12px;
   border-radius: 8px;
   color: var(--text);
@@ -559,6 +566,45 @@ a:hover {
 .nav-link.active {
   background: var(--primary-weak);
   color: var(--primary);
+}
+.nav-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.nav-link.active .nav-icon {
+  color: var(--primary);
+}
+.nav-group-toggle {
+  width: 100%;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+.nav-link-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-caret {
+  display: inline-flex;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.nav-caret.open {
+  transform: rotate(180deg);
+}
+.nav-group {
+  margin-left: 10px;
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+}
+.nav-sublink {
+  font-size: 13px;
 }
 
 /* Main */

@@ -7,6 +7,7 @@ import { Loading } from '@/components/Spinner';
 import { useConfirm } from '@/components/Confirm';
 import { Avatar } from '@/components/Avatar';
 import { DateField } from '@/components/DateField';
+import { ImportReportModal } from '@/components/ImportReportModal';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
@@ -27,6 +28,7 @@ export default function ReportsPage() {
   const [visible, setVisible] = useState(20);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showImport, setShowImport] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
 
@@ -112,6 +114,9 @@ export default function ReportsPage() {
               }))}
             />
           </div>
+          <button className="btn" onClick={() => setShowImport(true)}>
+            + Add
+          </button>
         </div>
       </div>
 
@@ -183,6 +188,13 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+
+      {showImport && (
+        <ImportReportModal
+          onClose={() => setShowImport(false)}
+          onImported={load}
+        />
+      )}
     </>
   );
 }
