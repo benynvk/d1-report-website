@@ -42,7 +42,7 @@ export function Nav() {
           );
         })}
       </nav>
-      <ThemeToggle />
+      <ThemeToggle floating />
     </aside>
   );
 }

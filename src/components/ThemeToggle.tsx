@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-export function ThemeToggle() {
+export function ThemeToggle({ floating = false }: { floating?: boolean }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      className="theme-toggle"
+      className={`theme-toggle${floating ? ' floating' : ''}`}
       onClick={toggle}
       aria-label="Toggle theme"
       title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

@@ -1,191 +1,197 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
-import { taskLabel } from '@/lib/format';
-import type { AttendanceStatus, DailyOverview } from '@/lib/types';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { formatDate, taskLabel } from '@/lib/format';
+import type { DailyOverview, SummaryResult } from '@/lib/types';
 
-function today(): string {
-  return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-}
+const LOGO =
+  'https://d1-mobile-app.s3.us-east-1.amazonaws.com/assets/d1_training_logo.png';
+const DAY = 86400000;
 const round = (n: number) => Math.round(n * 10) / 10;
 
-export default function DashboardPage() {
-  const [date, setDate] = useState(today());
-  const [data, setData] = useState<DailyOverview | null>(null);
-  const [error, setError] = useState('');
+/** Local (VN, UTC+7) date string 'YYYY-MM-DD' for `daysAgo` days back. */
+function isoDaysAgo(days: number): string {
+  return new Date(Date.now() + 7 * 3600 * 1000 - days * DAY)
+    .toISOString()
+    .slice(0, 10);
+}
+
+const PRESETS = [
+  { label: '7 days', days: 7 },
+  { label: '30 days', days: 30 },
+  { label: '90 days', days: 90 },
+];
+
+export default function HomePage() {
+  const [preset, setPreset] = useState(30);
+  const [from, setFrom] = useState(isoDaysAgo(30));
+  const [to, setTo] = useState(isoDaysAgo(0));
+  const [summary, setSummary] = useState<SummaryResult | null>(null);
+  const [yesterday, setYesterday] = useState<DailyOverview | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const yISO = useMemo(() => isoDaysAgo(1), []);
+
+  const applyPreset = (days: number) => {
+    setPreset(days);
+    setFrom(isoDaysAgo(days));
+    setTo(isoDaysAgo(0));
+  };
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    api
-      .daily(date)
-      .then(setData)
+    Promise.all([api.summary(from, to), api.daily(yISO)])
+      .then(([s, y]) => {
+        setSummary(s);
+        setYesterday(y);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [date]);
+  }, [from, to, yISO]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const shift = (days: number) => {
-    const d = new Date(date + 'T00:00:00Z');
-    d.setUTCDate(d.getUTCDate() + days);
-    setDate(d.toISOString().slice(0, 10));
-  };
-
-  const toggle = async (memberId: string, status: AttendanceStatus) => {
-    const current = data?.members.find((m) => m.memberId === memberId)?.status;
-    const next = current === status ? 'none' : status;
-    try {
-      await api.setAttendance(memberId, date, next);
-      load();
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
+  const members = summary?.members ?? [];
+  const maxHours = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
+  const totalHours = members.reduce((s, m) => s + m.totalHours, 0);
 
   return (
-    <>
-      <h1 className="page-title">Daily Overview</h1>
+    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <div className="home-header">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={LOGO} alt="D1 Training" className="brand-logo" />
+        <ThemeToggle />
+      </div>
+
+      <h1 className="page-title">Team Workload</h1>
       <p className="page-sub">
-        Team workload for the day. Flag a member as Holiday to exclude them from
-        stats and the reminder.
+        Reported hours per member for the selected range.
       </p>
 
       <div className="toolbar">
-        <button className="btn ghost sm" onClick={() => shift(-1)}>
-          ← Prev
-        </button>
+        <div className="preset-group">
+          {PRESETS.map((p) => (
+            <button
+              key={p.days}
+              className={`preset-btn${preset === p.days ? ' active' : ''}`}
+              onClick={() => applyPreset(p.days)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
         <input
           type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          value={from}
+          onChange={(e) => {
+            setPreset(0);
+            setFrom(e.target.value);
+          }}
         />
-        <button className="btn ghost sm" onClick={() => shift(1)}>
-          Next →
-        </button>
-        <button className="btn ghost sm" onClick={() => setDate(today())}>
-          Today
-        </button>
+        <span className="muted">→</span>
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => {
+            setPreset(0);
+            setTo(e.target.value);
+          }}
+        />
       </div>
 
       {error && <div className="alert error">{error}</div>}
 
       <div className="cards">
         <div className="card">
-          <div className="label">Reported</div>
+          <div className="label">Total hours</div>
+          <div className="value">{round(totalHours)}h</div>
+        </div>
+        <div className="card">
+          <div className="label">Active members</div>
+          <div className="value">{members.length}</div>
+        </div>
+        <div className="card">
+          <div className="label">Avg / member</div>
           <div className="value">
-            {data ? `${data.reportedCount}/${data.memberCount}` : '—'}
+            {members.length ? round(totalHours / members.length) : 0}h
           </div>
         </div>
-        <div className="card">
-          <div className="label">Pending</div>
-          <div className="value">{data?.pendingCount ?? '—'}</div>
-        </div>
-        <div className="card">
-          <div className="label">On leave</div>
-          <div className="value">{data?.onLeaveCount ?? '—'}</div>
-        </div>
-        <div className="card">
-          <div className="label">Total hours</div>
-          <div className="value">{data ? round(data.totalHours) : '—'}h</div>
-        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 22 }}>
+        <div className="panel-head">Hours by member</div>
+        {loading ? (
+          <Loading />
+        ) : members.length === 0 ? (
+          <div className="empty">No reports in this range.</div>
+        ) : (
+          <div className="chart">
+            {members.map((m) => (
+              <div className="chart-row" key={m.memberId}>
+                <span className="chart-name">{m.memberName}</span>
+                <div className="chart-track">
+                  <div
+                    className="chart-fill"
+                    style={{ width: `${(m.totalHours / maxHours) * 100}%` }}
+                  />
+                </div>
+                <span className="chart-value">
+                  {round(m.totalHours)}h
+                  <small>{m.daysReported}d</small>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="panel">
-        <div className="panel-head">Members</div>
+        <div className="panel-head">Yesterday — {formatDate(yISO)}</div>
         {loading ? (
           <Loading />
-        ) : !data || data.members.length === 0 ? (
-          <div className="empty">No members yet. Add them in Members.</div>
+        ) : !yesterday || yesterday.members.length === 0 ? (
+          <div className="empty">No members.</div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>State</th>
-                <th style={{ width: 170 }}>Utilization</th>
-                <th className="num">Hours</th>
-                <th>Work</th>
-                <th style={{ width: 170 }}>Attendance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.members.map((m) => (
-                <tr key={m.memberId}>
-                  <td style={{ fontWeight: 600 }}>{m.memberName}</td>
-                  <td>
-                    {m.status === 'holiday' ? (
-                      <span className="badge holiday">Holiday</span>
-                    ) : m.reported ? (
-                      <span className="badge ok">Reported</span>
-                    ) : (
-                      <span className="badge pending">Pending</span>
-                    )}
-                  </td>
-                  <td>
-                    {m.status === 'holiday' ? (
-                      <span className="muted">—</span>
-                    ) : (
-                      <UtilBar util={m.utilization} />
-                    )}
-                  </td>
-                  <td className="num">{m.reported ? `${round(m.totalHours)}h` : '—'}</td>
-                  <td>
-                    {m.entries.length === 0 ? (
-                      <span className="muted">
-                        {m.status === 'holiday' ? 'On leave' : 'No report'}
-                      </span>
-                    ) : (
-                      <ul className="entries">
-                        {m.entries.map((e, i) => (
-                          <li key={i}>
-                            <span className="task-name">
-                              {e.href ? (
-                                <a href={e.href} target="_blank" rel="noreferrer">
-                                  {taskLabel(e)}
-                                </a>
-                              ) : (
-                                taskLabel(e)
-                              )}
-                            </span>
-                            <span className="hours-pill">{e.hours}h</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
-                  <td>
-                    <button
-                      className={`chip-btn holiday${m.status === 'holiday' ? ' active' : ''}`}
-                      onClick={() => toggle(m.memberId, 'holiday')}
-                    >
-                      {m.status === 'holiday' ? '✓ Holiday' : 'Mark holiday'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="yday-list">
+            {yesterday.members.map((m) => (
+              <div className="yday-row" key={m.memberId}>
+                <span className="yday-name">{m.memberName}</span>
+                <div className="yday-body">
+                  {m.status === 'holiday' ? (
+                    <span className="badge holiday">Holiday</span>
+                  ) : !m.reported ? (
+                    <span className="badge pending">Not reported</span>
+                  ) : (
+                    <ul className="entries">
+                      {m.entries.map((e, i) => (
+                        <li key={i}>
+                          <span className="task-name">
+                            {e.href ? (
+                              <a href={e.href} target="_blank" rel="noreferrer">
+                                {taskLabel(e)}
+                              </a>
+                            ) : (
+                              taskLabel(e)
+                            )}
+                          </span>
+                          <span className="hours-pill">{e.hours}h</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-    </>
-  );
-}
-
-function UtilBar({ util }: { util: number }) {
-  const pct = Math.min(100, Math.round(util * 100));
-  const cls = util >= 1 ? 'over' : util < 0.6 ? 'under' : '';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div className={`bar ${cls}`}>
-        <span style={{ width: `${pct}%` }} />
-      </div>
-      <span className="muted">{Math.round(util * 100)}%</span>
     </div>
   );
 }

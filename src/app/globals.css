@@ -168,9 +168,6 @@ a:hover {
 
 /* Theme toggle — icon only */
 .theme-toggle {
-  position: absolute;
-  bottom: 16px;
-  left: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,6 +183,11 @@ a:hover {
 }
 .theme-toggle:hover {
   background: var(--bg);
+}
+.theme-toggle.floating {
+  position: absolute;
+  bottom: 16px;
+  left: 14px;
 }
 
 /* Custom Select */
@@ -614,6 +616,109 @@ label {
 
 .muted {
   color: var(--muted);
+}
+
+/* Home hero */
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.home-header .brand-logo {
+  max-width: 150px;
+}
+.preset-group {
+  display: inline-flex;
+  gap: 6px;
+}
+.preset-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.preset-btn.active {
+  border-color: transparent;
+  background: var(--primary-weak);
+  color: var(--primary);
+}
+
+/* Horizontal bar chart */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+.chart-row {
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  align-items: center;
+  gap: 14px;
+}
+.chart-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-track {
+  height: 24px;
+  border-radius: 8px;
+  background: var(--primary-weak);
+  overflow: hidden;
+}
+.chart-fill {
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--primary), var(--btn-primary-bg));
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+.chart-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chart-value small {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 4px;
+}
+@media (max-width: 640px) {
+  .chart-row {
+    grid-template-columns: 100px 1fr auto;
+    gap: 10px;
+  }
+}
+
+/* Yesterday section rows */
+.yday-list {
+  display: flex;
+  flex-direction: column;
+}
+.yday-row {
+  display: flex;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.yday-row:last-child {
+  border-bottom: none;
+}
+.yday-name {
+  width: 160px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.yday-body {
+  flex: 1;
+  min-width: 0;
 }
 .empty {
   padding: 40px;
