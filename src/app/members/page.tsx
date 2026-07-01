@@ -1,18 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useConfirm } from '@/components/Confirm';
 import { Loading, Spinner } from '@/components/Spinner';
+import { Avatar } from '@/components/Avatar';
+import { MemberDetail } from '@/components/MemberDetail';
+import { resizeImage } from '@/lib/image';
 import type { Member } from '@/lib/types';
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Member | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const rowFileRef = useRef<HTMLInputElement>(null);
+  const [avatarTarget, setAvatarTarget] = useState<string | null>(null);
   const confirm = useConfirm();
 
   const load = () => {
@@ -25,6 +33,15 @@ export default function MembersPage() {
   };
   useEffect(load, []);
 
+  const pickNewAvatar = async (file?: File) => {
+    if (!file) return;
+    try {
+      setAvatar(await resizeImage(file, 300));
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   const add = async () => {
     setError('');
     if (!name.trim() || !email.trim()) {
@@ -33,14 +50,30 @@ export default function MembersPage() {
     }
     setSaving(true);
     try {
-      await api.createMember({ name: name.trim(), email: email.trim() });
+      await api.createMember({
+        name: name.trim(),
+        email: email.trim(),
+        avatarUrl: avatar,
+      });
       setName('');
       setEmail('');
+      setAvatar(null);
       load();
     } catch (e: any) {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const changeAvatar = async (memberId: string, file?: File) => {
+    if (!file) return;
+    try {
+      const dataUrl = await resizeImage(file, 300);
+      await api.updateMember(memberId, { avatarUrl: dataUrl });
+      load();
+    } catch (e: any) {
+      setError(e.message);
     }
   };
 
@@ -85,6 +118,34 @@ export default function MembersPage() {
           <div className="panel">
             <div className="panel-head">Add member</div>
             <div style={{ padding: 16 }}>
+              <div className="field">
+                <label>Avatar</label>
+                <div className="avatar-upload">
+                  <div
+                    className="avatar-pick"
+                    onClick={() => fileRef.current?.click()}
+                    title="Upload avatar"
+                  >
+                    {avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatar} alt="avatar preview" />
+                    ) : (
+                      <span className="muted" style={{ fontSize: 22 }}>
+                        +
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => pickNewAvatar(e.target.files?.[0])}
+                  />
+                  <span className="hint" style={{ margin: 0 }}>
+                    Auto-resized to 300px.
+                  </span>
+                </div>
+              </div>
               <div className="field">
                 <label>Full name</label>
                 <input
@@ -136,7 +197,26 @@ export default function MembersPage() {
                 <tbody>
                   {members.map((m) => (
                     <tr key={m.id}>
-                      <td style={{ fontWeight: 600 }}>{m.name}</td>
+                      <td>
+                        <div className="member-cell">
+                          <span
+                            className="avatar-click"
+                            onClick={() => {
+                              setAvatarTarget(m.id);
+                              rowFileRef.current?.click();
+                            }}
+                            title="Change avatar"
+                          >
+                            <Avatar name={m.name} src={m.avatarUrl} size={32} />
+                          </span>
+                          <button
+                            className="name-link"
+                            onClick={() => setSelected(m)}
+                          >
+                            {m.name}
+                          </button>
+                        </div>
+                      </td>
                       <td>{m.email}</td>
                       <td>
                         {m.active ? (
@@ -169,6 +249,26 @@ export default function MembersPage() {
           </div>
         </div>
       </div>
+
+      {/* Hidden input for changing an existing member's avatar. */}
+      <input
+        ref={rowFileRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          if (avatarTarget) changeAvatar(avatarTarget, e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+
+      {selected && (
+        <MemberDetail
+          memberId={selected.id}
+          memberName={selected.name}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </>
   );
 }

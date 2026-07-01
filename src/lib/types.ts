@@ -11,6 +11,7 @@ export interface Member {
   name: string;
   email: string;
   chatUserId: string | null;
+  avatarUrl: string | null;
   active: boolean;
   createdAt: string;
 }
@@ -53,6 +54,7 @@ export interface TaskType {
 export interface MemberDayStat {
   memberId: string;
   memberName: string;
+  avatarUrl: string | null;
   status: AttendanceStatus | null;
   reported: boolean;
   totalHours: number;
@@ -102,6 +104,7 @@ export interface SummaryResult {
   members: {
     memberId: string;
     memberName: string;
+    avatarUrl: string | null;
     totalHours: number;
     daysReported: number;
   }[];

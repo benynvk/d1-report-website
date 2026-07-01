@@ -52,7 +52,11 @@ export const api = {
 
   // Members
   listMembers: () => request<Member[]>('/members'),
-  createMember: (data: { name: string; email: string }) =>
+  createMember: (data: {
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+  }) =>
     request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>
     request<Member>(`/members/${id}`, {

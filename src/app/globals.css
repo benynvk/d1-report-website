@@ -288,6 +288,38 @@ a:hover {
   gap: 10px;
   justify-content: flex-end;
 }
+.modal-lg {
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px 22px;
+}
+.modal-lg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.modal-lg-head h3 {
+  margin: 0;
+}
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.record-day {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.record-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
 
 /* Spinner */
 .spinner {
@@ -622,6 +654,73 @@ label {
   color: var(--muted);
 }
 
+/* Avatar */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.avatar-fallback {
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.avatar-upload input {
+  display: none;
+}
+.avatar-pick {
+  cursor: pointer;
+  border: 1px dashed var(--border);
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.avatar-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar-click {
+  cursor: pointer;
+  display: inline-flex;
+}
+.avatar-click:hover {
+  opacity: 0.85;
+}
+.name-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+}
+.name-link:hover {
+  text-decoration: underline;
+}
+
 /* Home hero */
 .home-hero {
   position: relative;
@@ -731,10 +830,22 @@ label {
   border-bottom: none;
 }
 .yday-name {
-  width: 110px;
+  width: 150px;
   flex-shrink: 0;
   font-weight: 600;
-  overflow-wrap: anywhere;
+}
+.yday-name .name-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-name.member-cell {
+  overflow: hidden;
+}
+.chart-name .name-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .yday-body {
   flex: 1;

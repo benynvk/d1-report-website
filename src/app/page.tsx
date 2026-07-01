@@ -4,8 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Avatar } from '@/components/Avatar';
+import { MemberDetail } from '@/components/MemberDetail';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyOverview, SummaryResult } from '@/lib/types';
+
+interface SelectedMember {
+  id: string;
+  name: string;
+}
 
 const LOGO =
   'https://d1-mobile-app.s3.us-east-1.amazonaws.com/assets/d1_training_logo.png';
@@ -35,6 +42,7 @@ export default function HomePage() {
   const [chartLoading, setChartLoading] = useState(true);
   const [daysLoading, setDaysLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selected, setSelected] = useState<SelectedMember | null>(null);
 
   const tISO = useMemo(() => isoDaysAgo(0), []);
   const yISO = useMemo(() => isoDaysAgo(1), []);
@@ -127,7 +135,17 @@ export default function HomePage() {
           <div className="chart">
             {members.map((m) => (
               <div className="chart-row" key={m.memberId}>
-                <span className="chart-name">{m.memberName}</span>
+                <span className="chart-name member-cell">
+                  <Avatar name={m.memberName} src={m.avatarUrl} size={26} />
+                  <button
+                    className="name-link"
+                    onClick={() =>
+                      setSelected({ id: m.memberId, name: m.memberName })
+                    }
+                  >
+                    {m.memberName}
+                  </button>
+                </span>
                 <div className="chart-track">
                   <div
                     className="chart-fill"
@@ -145,14 +163,29 @@ export default function HomePage() {
       </div>
 
       <div className="row">
-        <DayPanel title="Today" date={tISO} data={today} loading={daysLoading} />
+        <DayPanel
+          title="Today"
+          date={tISO}
+          data={today}
+          loading={daysLoading}
+          onSelect={setSelected}
+        />
         <DayPanel
           title="Yesterday"
           date={yISO}
           data={yesterday}
           loading={daysLoading}
+          onSelect={setSelected}
         />
       </div>
+
+      {selected && (
+        <MemberDetail
+          memberId={selected.id}
+          memberName={selected.name}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }
@@ -162,11 +195,13 @@ function DayPanel({
   date,
   data,
   loading,
+  onSelect,
 }: {
   title: string;
   date: string;
   data: DailyOverview | null;
   loading: boolean;
+  onSelect: (m: SelectedMember) => void;
 }) {
   return (
     <div className="col">
@@ -182,7 +217,17 @@ function DayPanel({
           <div className="yday-list">
             {data.members.map((m) => (
               <div className="yday-row" key={m.memberId}>
-                <span className="yday-name">{m.memberName}</span>
+                <span className="yday-name member-cell">
+                  <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
+                  <button
+                    className="name-link"
+                    onClick={() =>
+                      onSelect({ id: m.memberId, name: m.memberName })
+                    }
+                  >
+                    {m.memberName}
+                  </button>
+                </span>
                 <div className="yday-body">
                   {m.status === 'holiday' ? (
                     <span className="badge holiday">Holiday</span>
