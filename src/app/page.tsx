@@ -44,6 +44,7 @@ export default function HomePage() {
   const [chartLoading, setChartLoading] = useState(true);
   const [daysLoading, setDaysLoading] = useState(true);
   const [error, setError] = useState('');
+  const [grown, setGrown] = useState(false);
   const [selected, setSelected] = useState<SelectedMember | null>(null);
 
   const tISO = useMemo(() => isoDaysAgo(0), []);
@@ -82,6 +83,21 @@ export default function HomePage() {
     avgPerDay: m.daysReported ? m.totalHours / m.daysReported : 0,
   }));
   const maxAvg = members.reduce((m, x) => Math.max(m, x.avgPerDay), 0) || 1;
+  const maxTasks = members.reduce((m, x) => Math.max(m, x.taskCount), 0) || 1;
+  const maxTotal = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
+  const N = members.length;
+  // Points for the overlaid line charts (viewBox 0..100, top-padded to 8).
+  const px = (i: number) => ((i + 0.5) / N) * 100;
+  const py = (val: number, max: number) => 8 + (1 - val / max) * 84;
+  const tasksPts = members.map((m, i) => `${px(i)},${py(m.taskCount, maxTasks)}`);
+  const hoursPts = members.map((m, i) => `${px(i)},${py(m.totalHours, maxTotal)}`);
+
+  // Re-run the grow animation whenever the chart data changes.
+  useEffect(() => {
+    setGrown(false);
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, [summary]);
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -127,71 +143,77 @@ export default function HomePage() {
 
       {error && <div className="alert error">{error}</div>}
 
-      <div className="panel" style={{ marginBottom: 22 }}>
-        <div className="panel-head">
-          Average working hours per day
-          <span className="muted" style={{ fontWeight: 400, marginLeft: 8 }}>
-            ({formatDate(from)} → {formatDate(to)})
-          </span>
-        </div>
+      <div className="panel" style={{ marginBottom: 22, paddingTop: 8 }}>
         {chartLoading ? (
           <Loading />
         ) : members.length === 0 ? (
           <div className="empty">No reports in this range.</div>
         ) : (
-          <div className="bar-chart">
-            {members.map((m) => {
-              const pct = (m.avgPerDay / maxAvg) * 100;
-              return (
-              <div className="bar-col" key={m.memberId}>
-                <div className="bar-col-track">
-                  <span
-                    className="bar-col-value"
-                    style={{ bottom: `calc(${pct}% + 7px)` }}
-                  >
-                    {round(m.avgPerDay)}h
-                  </span>
-                  <div
-                    className="bar-col-fill"
-                    style={{ height: `${pct}%` }}
-                  >
-                    <span className="bar-col-onbar">
-                      {m.taskCount} tasks
-                      <br />
-                      {round(m.totalHours)}h
-                    </span>
+          <>
+            <div className="bar-chart">
+              {members.map((m, i) => {
+                const pct = (m.avgPerDay / maxAvg) * 100;
+                const open = () =>
+                  setSelected({
+                    id: m.memberId,
+                    name: m.memberName,
+                    avatarUrl: m.avatarUrl,
+                  });
+                return (
+                  <div className="bar-col clickable" key={m.memberId} onClick={open}>
+                    <div className="bar-col-track">
+                      <span
+                        className="bar-col-value"
+                        style={{
+                          bottom: `calc(${grown ? pct : 0}% + 7px)`,
+                          transitionDelay: `${i * 60}ms`,
+                        }}
+                      >
+                        {round(m.avgPerDay)}h
+                      </span>
+                      <div
+                        className="bar-col-fill"
+                        style={{
+                          height: `${grown ? pct : 0}%`,
+                          transitionDelay: `${i * 60}ms`,
+                        }}
+                      >
+                        <span className="bar-col-onbar">
+                          {m.taskCount} tasks
+                          <br />
+                          {round(m.totalHours)}h
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bar-col-label">
+                      <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
+                      <span className="bar-name">{m.memberName}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bar-col-label">
-                  <span
-                    className="avatar-click"
-                    onClick={() =>
-                      setSelected({
-                        id: m.memberId,
-                        name: m.memberName,
-                        avatarUrl: m.avatarUrl,
-                      })
-                    }
-                  >
-                    <Avatar name={m.memberName} src={m.avatarUrl} size={34} />
-                  </span>
-                  <button
-                    className="name-link"
-                    onClick={() =>
-                      setSelected({
-                        id: m.memberId,
-                        name: m.memberName,
-                        avatarUrl: m.avatarUrl,
-                      })
-                    }
-                  >
-                    {m.memberName}
-                  </button>
-                </div>
-              </div>
-              );
-            })}
-          </div>
+                );
+              })}
+              {/* Overlaid line charts: tasks & total hours */}
+              <svg
+                className="bar-line-overlay"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <polyline className="line-hours" points={hoursPts.join(' ')} />
+                <polyline className="line-tasks" points={tasksPts.join(' ')} />
+              </svg>
+            </div>
+            <div className="chart-legend">
+              <span className="legend-item">
+                <span className="bar-swatch" /> Avg working hours / day
+              </span>
+              <span className="legend-item">
+                <span className="line-swatch hours" /> Total hours
+              </span>
+              <span className="legend-item">
+                <span className="line-swatch tasks" /> Total tasks
+              </span>
+            </div>
+          </>
         )}
       </div>
 
@@ -250,32 +272,20 @@ function DayPanel({
         ) : (
           <div className="yday-list">
             {data.members.map((m) => (
-              <div className="yday-row" key={m.memberId}>
+              <div
+                className="yday-row clickable"
+                key={m.memberId}
+                onClick={() =>
+                  onSelect({
+                    id: m.memberId,
+                    name: m.memberName,
+                    avatarUrl: m.avatarUrl,
+                  })
+                }
+              >
                 <span className="yday-name member-cell">
-                  <span
-                    className="avatar-click"
-                    onClick={() =>
-                      onSelect({
-                        id: m.memberId,
-                        name: m.memberName,
-                        avatarUrl: m.avatarUrl,
-                      })
-                    }
-                  >
-                    <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
-                  </span>
-                  <button
-                    className="name-link"
-                    onClick={() =>
-                      onSelect({
-                        id: m.memberId,
-                        name: m.memberName,
-                        avatarUrl: m.avatarUrl,
-                      })
-                    }
-                  >
-                    {m.memberName}
-                  </button>
+                  <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
+                  <span>{m.memberName}</span>
                 </span>
                 <div className="yday-body">
                   {m.status === 'holiday' ? (
@@ -292,7 +302,12 @@ function DayPanel({
                         <li key={i}>
                           <span className="task-name">
                             {e.href ? (
-                              <a href={e.href} target="_blank" rel="noreferrer">
+                              <a
+                                href={e.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
                                 {taskLabel(e)}
                               </a>
                             ) : (

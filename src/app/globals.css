@@ -861,10 +861,91 @@ label {
 
 /* Vertical column chart */
 .bar-chart {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 14px;
   padding: 40px 24px 22px;
+}
+.clickable {
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.clickable:hover {
+  background: var(--bg);
+}
+.bar-name {
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Overlaid line charts */
+.bar-line-overlay {
+  position: absolute;
+  top: 40px;
+  left: 24px;
+  right: 24px;
+  height: 190px;
+  pointer-events: none;
+  overflow: visible;
+}
+.line-hours,
+.line-tasks {
+  fill: none;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.line-hours {
+  stroke: #f59e0b;
+}
+.line-tasks {
+  stroke: #10b981;
+}
+.dot-hours {
+  fill: #f59e0b;
+  vector-effect: non-scaling-stroke;
+}
+.dot-tasks {
+  fill: #10b981;
+  vector-effect: non-scaling-stroke;
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 24px 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.bar-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--btn-primary-bg);
+}
+.line-swatch {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
+.line-swatch.hours {
+  background: #f59e0b;
+}
+.line-swatch.tasks {
+  background: #10b981;
 }
 .bar-col {
   display: flex;
@@ -883,6 +964,7 @@ label {
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  transition: bottom 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bar-col-track {
   position: relative;
@@ -898,11 +980,12 @@ label {
   background: linear-gradient(180deg, var(--primary), var(--btn-primary-bg));
   border-radius: 12px;
   min-height: 4px;
-  transition: height 0.4s ease;
+  transition: height 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 14px;
+  overflow: hidden;
 }
 .bar-col-onbar {
   color: #fff;
@@ -911,6 +994,17 @@ label {
   text-align: center;
   line-height: 1.4;
   white-space: nowrap;
+  animation: fadeInUp 0.6s ease both;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .bar-col-label {
   display: flex;
