@@ -18,7 +18,7 @@ deploys to Cloudflare Pages with no server runtime.
 ## Run locally
 
 ```bash
-cp .env.example .env.local     # NEXT_PUBLIC_API_URL=http://localhost:4000/api
+cp .env.example .env.local     # NEXT_PUBLIC_API_URL=http://localhost:4000
 npm install
 npm run dev                    # http://localhost:3000
 ```
@@ -31,7 +31,7 @@ This app uses `output: 'export'` — `next build` emits a static site to `out/`.
 
 - **Build command:** `npm run build`
 - **Output directory:** `out`
-- **Environment variable:** `NEXT_PUBLIC_API_URL=https://<your-api>.onrender.com/api`
+- **Environment variable:** `NEXT_PUBLIC_API_URL=https://<your-api>.onrender.com`
 
 `NEXT_PUBLIC_API_URL` is inlined at build time, so set it in the Pages build
 settings before building. Also set `CORS_ORIGIN` on the API to this site's URL.

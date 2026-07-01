@@ -11,7 +11,9 @@ import type {
   TaskType,
 } from './types';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const BASE = (
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+).replace(/\/$/, '');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
