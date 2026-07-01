@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useConfirm } from '@/components/Confirm';
+import { Spinner } from '@/components/Spinner';
 import type { Member } from '@/lib/types';
 
 export default function MembersPage() {
@@ -10,6 +12,7 @@ export default function MembersPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const confirm = useConfirm();
 
   const load = () => {
     api.listMembers().then(setMembers).catch((e) => setError(e.message));
@@ -45,12 +48,14 @@ export default function MembersPage() {
   };
 
   const remove = async (m: Member) => {
-    if (
-      !confirm(
-        `Delete ${m.name}? This also deletes all their reports and attendance. This cannot be undone.`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Delete ${m.name}?`,
+      message:
+        'This also deletes all their reports and attendance. This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteMember(m.id);
       load();
@@ -92,8 +97,14 @@ export default function MembersPage() {
                   style={{ width: '100%' }}
                 />
               </div>
-              <button className="btn" onClick={add} disabled={saving}>
-                {saving ? 'Adding…' : 'Add member'}
+              <button className="btn block" onClick={add} disabled={saving}>
+                {saving ? (
+                  <span className="btn-spin">
+                    <Spinner sm /> Adding…
+                  </span>
+                ) : (
+                  'Add member'
+                )}
               </button>
             </div>
           </div>

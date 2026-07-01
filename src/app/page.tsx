@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { Loading } from '@/components/Spinner';
 import type { AttendanceStatus, DailyOverview } from '@/lib/types';
 
 function today(): string {
@@ -97,7 +98,7 @@ export default function DashboardPage() {
       <div className="panel">
         <div className="panel-head">Members</div>
         {loading ? (
-          <div className="empty">Loading…</div>
+          <Loading />
         ) : !data || data.members.length === 0 ? (
           <div className="empty">No members yet. Add them in Members.</div>
         ) : (

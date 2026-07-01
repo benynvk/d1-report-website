@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ThemeToggle } from './ThemeToggle';
 
 const LINKS = [
   { href: '/', label: 'Daily Overview' },
   { href: '/reports', label: 'Reports' },
   { href: '/import', label: 'Import' },
-  { href: '/summary', label: 'Summary' },
   { href: '/members', label: 'Members' },
   { href: '/task-types', label: 'Task Types' },
 ];
@@ -38,6 +38,7 @@ export function Nav() {
           );
         })}
       </nav>
+      <ThemeToggle />
       <div className="sidebar-foot">Workload reporting</div>
     </aside>
   );

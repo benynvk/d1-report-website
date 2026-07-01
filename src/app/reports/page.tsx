@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { Select } from '@/components/Select';
+import { Loading } from '@/components/Spinner';
+import { useConfirm } from '@/components/Confirm';
 import type { DailyReport, Member } from '@/lib/types';
 
 function daysAgo(n: number): string {
@@ -20,6 +23,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     api.listMembers().then(setMembers).catch(() => {});
@@ -40,7 +44,13 @@ export default function ReportsPage() {
   }, [load]);
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this report?')) return;
+    const ok = await confirm({
+      title: 'Delete report',
+      message: 'Delete this report? This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.deleteReport(id);
       load();
@@ -63,16 +73,14 @@ export default function ReportsPage() {
           <label>To</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
-        <div>
+        <div style={{ minWidth: 200 }}>
           <label>Member</label>
-          <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
-            <option value="">All members</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={memberId}
+            onChange={setMemberId}
+            placeholder="All members"
+            options={members.map((m) => ({ value: m.id, label: m.name }))}
+          />
         </div>
       </div>
 
@@ -81,7 +89,7 @@ export default function ReportsPage() {
       <div className="panel">
         <div className="panel-head">{reports.length} report(s)</div>
         {loading ? (
-          <div className="empty">Loading…</div>
+          <Loading />
         ) : reports.length === 0 ? (
           <div className="empty">No reports in this range.</div>
         ) : (

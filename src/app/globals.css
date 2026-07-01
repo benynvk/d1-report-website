@@ -1,6 +1,8 @@
 :root {
   --bg: #f6f7f9;
   --panel: #ffffff;
+  --input-bg: #ffffff;
+  --th-bg: #fafafa;
   --border: #e5e7eb;
   --text: #111827;
   --muted: #6b7280;
@@ -11,6 +13,22 @@
   --red: #dc2626;
   --radius: 12px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --input-bg: #1e222b;
+  --th-bg: #1b1f27;
+  --border: #2a2f3a;
+  --text: #e6e8ec;
+  --muted: #9aa4b2;
+  --primary: #818cf8;
+  --primary-weak: #23263a;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -107,7 +125,7 @@ a:hover {
   padding: 3px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--input-bg);
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
@@ -125,12 +143,227 @@ a:hover {
   color: #b45309;
 }
 .invalid-row {
-  background: #fef2f2;
+  background: rgba(220, 38, 38, 0.12);
 }
 .hint {
   font-size: 12px;
   color: var(--muted);
   margin-top: 6px;
+}
+.hint code {
+  background: var(--th-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Full-width submit button inside form cards */
+.btn.block {
+  width: 100%;
+  display: block;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  position: absolute;
+  bottom: 40px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--bg);
+}
+
+/* Custom Select */
+.select {
+  position: relative;
+  width: 100%;
+}
+.select-btn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 32px 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+}
+.select-btn.placeholder {
+  color: var(--muted);
+}
+.select-btn::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-70%) rotate(45deg);
+}
+.select-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+.select-opt {
+  padding: 8px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 14px;
+}
+.select-opt:hover {
+  background: var(--bg);
+}
+.select-opt.selected {
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Modal / confirm dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 420px;
+  padding: 22px;
+}
+.modal h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.modal p {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Spinner */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.spinner.sm {
+  width: 15px;
+  height: 15px;
+  border-width: 2px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 44px;
+}
+.btn-spin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn .spinner.sm {
+  border-color: rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .app {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+  .sidebar nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .nav-link {
+    margin-bottom: 0;
+  }
+  .brand {
+    padding-bottom: 12px;
+  }
+  .theme-toggle {
+    position: static;
+    margin-top: 12px;
+  }
+  .sidebar-foot {
+    display: none;
+  }
+  .main {
+    padding: 18px 16px;
+  }
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .col {
+    min-width: 0;
+  }
+}
+@media (max-width: 520px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .page-title {
+    font-size: 19px;
+  }
+  th,
+  td {
+    padding: 9px 12px;
+  }
 }
 .nav-link {
   display: block;
@@ -204,7 +437,7 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
+  overflow-x: auto;
 }
 .panel-head {
   padding: 14px 18px;
@@ -229,7 +462,7 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--muted);
-  background: #fafafa;
+  background: var(--th-bg);
 }
 tbody tr:last-child td {
   border-bottom: none;
@@ -267,7 +500,7 @@ tbody tr:last-child td {
 .bar {
   height: 8px;
   border-radius: 999px;
-  background: #eef2ff;
+  background: var(--primary-weak);
   overflow: hidden;
   min-width: 90px;
 }
@@ -296,8 +529,11 @@ textarea {
   padding: 8px 11px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--input-bg);
   color: var(--text);
+}
+input[type='date'] {
+  color-scheme: light dark;
 }
 textarea {
   width: 100%;
@@ -331,14 +567,19 @@ label {
   cursor: not-allowed;
 }
 .btn.ghost {
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   border-color: var(--border);
 }
 .btn.danger {
-  background: #fff;
+  background: var(--panel);
   color: var(--red);
   border-color: var(--border);
+}
+.btn.solid-danger {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
 }
 .btn.sm {
   padding: 5px 10px;

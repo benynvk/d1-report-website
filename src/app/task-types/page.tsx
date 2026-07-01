@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useConfirm } from '@/components/Confirm';
+import { Spinner } from '@/components/Spinner';
 import type { TaskType } from '@/lib/types';
 
 export default function TaskTypesPage() {
@@ -9,6 +11,7 @@ export default function TaskTypesPage() {
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const confirm = useConfirm();
 
   const load = () => {
     api.listTaskTypes().then(setTypes).catch((e) => setError(e.message));
@@ -30,9 +33,16 @@ export default function TaskTypesPage() {
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (t: TaskType) => {
+    const ok = await confirm({
+      title: 'Remove task type',
+      message: `Remove "${t.label}"? Tasks with this name will then require a Teamwork link.`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await api.deleteTaskType(id);
+      await api.deleteTaskType(t.id);
       load();
     } catch (e: any) {
       setError(e.message);
@@ -64,8 +74,14 @@ export default function TaskTypesPage() {
                   onKeyDown={(e) => e.key === 'Enter' && add()}
                 />
               </div>
-              <button className="btn" onClick={add} disabled={saving}>
-                {saving ? 'Adding…' : 'Add type'}
+              <button className="btn block" onClick={add} disabled={saving}>
+                {saving ? (
+                  <span className="btn-spin">
+                    <Spinner sm /> Adding…
+                  </span>
+                ) : (
+                  'Add type'
+                )}
               </button>
             </div>
           </div>
@@ -91,7 +107,7 @@ export default function TaskTypesPage() {
                       <td>
                         <button
                           className="btn danger sm"
-                          onClick={() => remove(t.id)}
+                          onClick={() => remove(t)}
                         >
                           Remove
                         </button>

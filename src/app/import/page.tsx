@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
+import { Select } from '@/components/Select';
+import { Spinner } from '@/components/Spinner';
 import type { Member, PreviewResult, ReportConfig } from '@/lib/types';
 
 function today(): string {
@@ -79,18 +81,15 @@ export default function ImportPage() {
         <div className="col">
           <div className="field">
             <label>Member</label>
-            <select
+            <Select
               value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              style={{ width: '100%' }}
-            >
-              <option value="">— Select member —</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.email})
-                </option>
-              ))}
-            </select>
+              onChange={setMemberId}
+              placeholder="— Select member —"
+              options={members.map((m) => ({
+                value: m.id,
+                label: `${m.name} (${m.email})`,
+              }))}
+            />
           </div>
           <div className="field">
             <label>Date</label>
@@ -114,13 +113,19 @@ export default function ImportPage() {
               </div>
             )}
           </div>
-          <button className="btn" onClick={submit} disabled={!canSubmit}>
-            {saving ? 'Saving…' : 'Save report'}
+          <button className="btn block" onClick={submit} disabled={!canSubmit}>
+            {saving ? (
+              <span className="btn-spin">
+                <Spinner sm /> Saving…
+              </span>
+            ) : (
+              'Save report'
+            )}
           </button>
           {hasInvalid && (
-            <span className="hint" style={{ marginLeft: 10 }}>
+            <div className="hint" style={{ marginTop: 8 }}>
               Fix the highlighted tasks first.
-            </span>
+            </div>
           )}
         </div>
 
