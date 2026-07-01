@@ -1002,7 +1002,7 @@ label {
   border-bottom: none;
 }
 .yday-name {
-  width: 92px;
+  width: 80px;
   flex-shrink: 0;
   font-weight: 600;
 }

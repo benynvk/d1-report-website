@@ -137,7 +137,7 @@ export default function HomePage() {
           <div className="bar-chart">
             {members.map((m) => (
               <div className="bar-col" key={m.memberId}>
-                <span className="bar-col-value">{round(m.avgPerDay)}h/day</span>
+                <span className="bar-col-value">{round(m.avgPerDay)}h</span>
                 <div className="bar-col-track">
                   <div
                     className="bar-col-fill"
@@ -175,9 +175,6 @@ export default function HomePage() {
                   >
                     {m.memberName}
                   </button>
-                  <span className="bar-col-meta">
-                    {m.taskCount} tasks · {round(m.totalHours)}h
-                  </span>
                 </div>
               </div>
             ))}
