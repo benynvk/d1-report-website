@@ -22,7 +22,6 @@ export function Nav() {
       <div className="brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={LOGO} alt="D1 Training" className="brand-logo" />
-        <span>D1 Training</span>
       </div>
       <nav>
         {LINKS.map((l) => {

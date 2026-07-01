@@ -44,6 +44,21 @@ export default function MembersPage() {
     }
   };
 
+  const remove = async (m: Member) => {
+    if (
+      !confirm(
+        `Delete ${m.name}? This also deletes all their reports and attendance. This cannot be undone.`,
+      )
+    )
+      return;
+    try {
+      await api.deleteMember(m.id);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   return (
     <>
       <h1 className="page-title">Members</h1>
@@ -112,12 +127,20 @@ export default function MembersPage() {
                         )}
                       </td>
                       <td>
-                        <button
-                          className="btn ghost sm"
-                          onClick={() => toggleActive(m)}
-                        >
-                          {m.active ? 'Deactivate' : 'Activate'}
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            className="btn ghost sm"
+                            onClick={() => toggleActive(m)}
+                          >
+                            {m.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            className="btn danger sm"
+                            onClick={() => remove(m)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

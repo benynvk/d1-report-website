@@ -59,6 +59,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  deleteMember: (id: string) =>
+    request<void>(`/members/${id}`, { method: 'DELETE' }),
 
   // Task types (no-URL allowlist)
   listTaskTypes: () => request<TaskType[]>('/task-types'),

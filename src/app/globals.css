@@ -68,10 +68,11 @@ a:hover {
   background: var(--primary);
 }
 .brand-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 100%;
+  max-width: 160px;
+  height: auto;
   object-fit: contain;
+  object-position: left center;
 }
 .sidebar-foot {
   position: absolute;
