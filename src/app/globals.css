@@ -731,9 +731,10 @@ label {
   border-bottom: none;
 }
 .yday-name {
-  width: 160px;
+  width: 110px;
   flex-shrink: 0;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .yday-body {
   flex: 1;

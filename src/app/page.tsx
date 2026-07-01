@@ -30,10 +30,12 @@ export default function HomePage() {
   const [from, setFrom] = useState(isoDaysAgo(30));
   const [to, setTo] = useState(isoDaysAgo(0));
   const [summary, setSummary] = useState<SummaryResult | null>(null);
+  const [today, setToday] = useState<DailyOverview | null>(null);
   const [yesterday, setYesterday] = useState<DailyOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const tISO = useMemo(() => isoDaysAgo(0), []);
   const yISO = useMemo(() => isoDaysAgo(1), []);
 
   const applyPreset = (days: number) => {
@@ -45,14 +47,15 @@ export default function HomePage() {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    Promise.all([api.summary(from, to), api.daily(yISO)])
-      .then(([s, y]) => {
+    Promise.all([api.summary(from, to), api.daily(tISO), api.daily(yISO)])
+      .then(([s, t, y]) => {
         setSummary(s);
+        setToday(t);
         setYesterday(y);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [from, to, yISO]);
+  }, [from, to, tISO, yISO]);
 
   useEffect(() => {
     load();
@@ -132,15 +135,43 @@ export default function HomePage() {
         )}
       </div>
 
+      <div className="row">
+        <DayPanel title="Today" date={tISO} data={today} loading={loading} />
+        <DayPanel
+          title="Yesterday"
+          date={yISO}
+          data={yesterday}
+          loading={loading}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DayPanel({
+  title,
+  date,
+  data,
+  loading,
+}: {
+  title: string;
+  date: string;
+  data: DailyOverview | null;
+  loading: boolean;
+}) {
+  return (
+    <div className="col">
       <div className="panel">
-        <div className="panel-head">Yesterday — {formatDate(yISO)}</div>
+        <div className="panel-head">
+          {title} · {formatDate(date)}
+        </div>
         {loading ? (
           <Loading />
-        ) : !yesterday || yesterday.members.length === 0 ? (
+        ) : !data || data.members.length === 0 ? (
           <div className="empty">No members.</div>
         ) : (
           <div className="yday-list">
-            {yesterday.members.map((m) => (
+            {data.members.map((m) => (
               <div className="yday-row" key={m.memberId}>
                 <span className="yday-name">{m.memberName}</span>
                 <div className="yday-body">
