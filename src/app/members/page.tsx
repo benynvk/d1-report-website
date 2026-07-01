@@ -225,8 +225,14 @@ export default function MembersPage() {
                           <span className="badge gray">Inactive</span>
                         )}
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                      <td style={{ textAlign: 'right' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 6,
+                            justifyContent: 'flex-end',
+                          }}
+                        >
                           <button
                             className="btn ghost sm"
                             onClick={() => toggleActive(m)}
