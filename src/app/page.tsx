@@ -128,7 +128,12 @@ export default function HomePage() {
       {error && <div className="alert error">{error}</div>}
 
       <div className="panel" style={{ marginBottom: 22 }}>
-        <div className="panel-head">Average hours per working day</div>
+        <div className="panel-head">
+          Average working hours per day
+          <span className="muted" style={{ fontWeight: 400, marginLeft: 8 }}>
+            {formatDate(from)} → {formatDate(to)}
+          </span>
+        </div>
         {chartLoading ? (
           <Loading />
         ) : members.length === 0 ? (
@@ -137,7 +142,6 @@ export default function HomePage() {
           <div className="bar-chart">
             {members.map((m) => (
               <div className="bar-col" key={m.memberId}>
-                <span className="bar-col-value">{round(m.avgPerDay)}h</span>
                 <div className="bar-col-track">
                   <div
                     className="bar-col-fill"

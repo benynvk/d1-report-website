@@ -863,30 +863,27 @@ label {
 .bar-chart {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  gap: 10px;
+  gap: 14px;
   padding: 26px 24px 22px;
-  overflow-x: auto;
 }
 .bar-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  width: 132px;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 .bar-col-value {
   font-weight: 700;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  margin-bottom: 2px;
 }
 .bar-col-track {
   width: 100%;
-  max-width: 122px;
-  height: 170px;
+  max-width: 150px;
+  height: 190px;
   display: flex;
   align-items: flex-end;
   background: var(--primary-weak);
@@ -900,8 +897,9 @@ label {
   min-height: 4px;
   transition: height 0.4s ease;
   display: flex;
+  align-items: flex-end;
   justify-content: center;
-  padding-top: 12px;
+  padding-bottom: 10px;
 }
 .bar-col-onbar {
   color: #fff;
