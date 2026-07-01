@@ -204,7 +204,7 @@ export default function HomePage() {
             </div>
             <div className="chart-legend">
               <span className="legend-item">
-                <span className="bar-swatch" /> Avg working hours / day
+                <span className="bar-swatch" /> Avg working hours/day
               </span>
               <span className="legend-item">
                 <span className="line-swatch hours" /> Total hours
