@@ -902,11 +902,11 @@ label {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 10px;
+  padding-bottom: 14px;
 }
 .bar-col-onbar {
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-align: center;
   line-height: 1.4;
