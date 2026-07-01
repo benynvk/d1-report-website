@@ -35,7 +35,7 @@ export interface DailyReport {
   updatedAt: string;
 }
 
-export type AttendanceStatus = 'wfh' | 'holiday';
+export type AttendanceStatus = 'holiday';
 
 export interface Attendance {
   id: string;
@@ -73,7 +73,6 @@ export interface DailyOverview {
   reportedCount: number;
   pendingCount: number;
   onLeaveCount: number;
-  wfhCount: number;
   totalHours: number;
   members: MemberDayStat[];
 }

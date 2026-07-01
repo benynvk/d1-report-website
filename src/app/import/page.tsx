@@ -12,9 +12,9 @@ function today(): string {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-const PLACEHOLDER = `- Build dashboard https://offspringdigital.teamwork.com/app/tasks/101: 4
-- Fix login bug https://offspringdigital.teamwork.com/app/tasks/102: 2
-- Weekly meeting: 1`;
+const PLACEHOLDER = `https://offspringdigital.teamwork.com/app/tasks/101: 4
+https://offspringdigital.teamwork.com/app/tasks/102: 2
+Weekly meeting: 1`;
 
 export default function ImportPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -97,25 +97,28 @@ export default function ImportPage() {
 
       <div className="row">
         <div className="col">
-          <div className="field">
-            <label>Member</label>
-            <Select
-              value={memberId}
-              onChange={setMemberId}
-              placeholder="— Select member —"
-              options={members.map((m) => ({
-                value: m.id,
-                label: `${m.name} (${m.email})`,
-              }))}
-            />
-          </div>
-          <div className="field">
-            <label>Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+          <div className="field-row">
+            <div className="field" style={{ flex: 2 }}>
+              <label>Member</label>
+              <Select
+                value={memberId}
+                onChange={setMemberId}
+                placeholder="Select member"
+                options={members.map((m) => ({
+                  value: m.id,
+                  label: `${m.name} (${m.email})`,
+                }))}
+              />
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </div>
           </div>
           <div className="field">
             <label>Report text</label>

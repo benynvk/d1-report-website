@@ -17,6 +17,10 @@ const LOGO =
 
 export function Nav() {
   const pathname = usePathname();
+  // Home is a clean public dashboard — no sidebar. Reach management pages by
+  // typing their URL (e.g. /members, /import).
+  if (pathname === '/') return null;
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -39,7 +43,6 @@ export function Nav() {
         })}
       </nav>
       <ThemeToggle />
-      <div className="sidebar-foot">Workload reporting</div>
     </aside>
   );
 }

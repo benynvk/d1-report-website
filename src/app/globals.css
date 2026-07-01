@@ -8,6 +8,8 @@
   --muted: #6b7280;
   --primary: #4f46e5;
   --primary-weak: #eef2ff;
+  --btn-primary-bg: #4f46e5;
+  --btn-primary-text: #ffffff;
   --green: #16a34a;
   --amber: #d97706;
   --red: #dc2626;
@@ -23,8 +25,10 @@
   --border: #2a2f3a;
   --text: #e6e8ec;
   --muted: #9aa4b2;
-  --primary: #818cf8;
+  --primary: #a5b4fc;
   --primary-weak: #23263a;
+  --btn-primary-bg: #6366f1;
+  --btn-primary-text: #ffffff;
   --green: #4ade80;
   --amber: #fbbf24;
   --red: #f87171;
@@ -162,22 +166,22 @@ a:hover {
   display: block;
 }
 
-/* Theme toggle */
+/* Theme toggle — icon only */
 .theme-toggle {
   position: absolute;
-  bottom: 40px;
+  bottom: 16px;
   left: 14px;
-  right: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: transparent;
   border-radius: 8px;
-  background: var(--input-bg);
-  color: var(--text);
-  font-weight: 600;
-  font-size: 13px;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
 }
 .theme-toggle:hover {
@@ -550,12 +554,23 @@ label {
 .field {
   margin-bottom: 14px;
 }
+.field-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+@media (max-width: 520px) {
+  .field-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
 .btn {
   padding: 8px 15px;
   border-radius: 8px;
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff;
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   font-weight: 600;
   cursor: pointer;
 }
@@ -622,9 +637,34 @@ label {
   border: 1px solid #bbf7d0;
 }
 .entries {
-  margin: 6px 0 0;
-  padding-left: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .entries li {
-  margin-bottom: 3px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.entries .task-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.entries .hours-pill {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--th-bg);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-variant-numeric: tabular-nums;
+}
+.entries .no-name {
+  color: var(--muted);
+  font-style: italic;
 }

@@ -25,9 +25,13 @@ export function ThemeToggle() {
   };
 
   return (
-    <button className="theme-toggle" onClick={toggle} aria-label="Toggle theme">
-      <span>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
-      <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+    <button
+      className="theme-toggle"
+      onClick={toggle}
+      aria-label="Toggle theme"
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? '🌙' : '☀️'}
     </button>
   );
 }

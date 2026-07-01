@@ -52,8 +52,8 @@ export default function DashboardPage() {
     <>
       <h1 className="page-title">Daily Overview</h1>
       <p className="page-sub">
-        Team workload for the day. Tick WFH / Holiday for a member; people on
-        holiday are skipped by the reminder.
+        Team workload for the day. Flag a member as Holiday to exclude them from
+        stats and the reminder.
       </p>
 
       <div className="toolbar">
@@ -126,11 +126,6 @@ export default function DashboardPage() {
                     ) : (
                       <span className="badge pending">Pending</span>
                     )}
-                    {m.status === 'wfh' && (
-                      <span className="badge wfh" style={{ marginLeft: 6 }}>
-                        WFH
-                      </span>
-                    )}
                   </td>
                   <td>
                     {m.status === 'holiday' ? (
@@ -149,34 +144,28 @@ export default function DashboardPage() {
                       <ul className="entries">
                         {m.entries.map((e, i) => (
                           <li key={i}>
-                            {e.href ? (
-                              <a href={e.href} target="_blank" rel="noreferrer">
-                                {taskLabel(e)}
-                              </a>
-                            ) : (
-                              taskLabel(e)
-                            )}
-                            <span className="muted"> — {e.hours}h</span>
+                            <span className="task-name">
+                              {e.href ? (
+                                <a href={e.href} target="_blank" rel="noreferrer">
+                                  {taskLabel(e)}
+                                </a>
+                              ) : (
+                                taskLabel(e)
+                              )}
+                            </span>
+                            <span className="hours-pill">{e.hours}h</span>
                           </li>
                         ))}
                       </ul>
                     )}
                   </td>
                   <td>
-                    <div className="status-toggle">
-                      <button
-                        className={`chip-btn wfh${m.status === 'wfh' ? ' active' : ''}`}
-                        onClick={() => toggle(m.memberId, 'wfh')}
-                      >
-                        WFH
-                      </button>
-                      <button
-                        className={`chip-btn holiday${m.status === 'holiday' ? ' active' : ''}`}
-                        onClick={() => toggle(m.memberId, 'holiday')}
-                      >
-                        Holiday
-                      </button>
-                    </div>
+                    <button
+                      className={`chip-btn holiday${m.status === 'holiday' ? ' active' : ''}`}
+                      onClick={() => toggle(m.memberId, 'holiday')}
+                    >
+                      {m.status === 'holiday' ? '✓ Holiday' : 'Mark holiday'}
+                    </button>
                   </td>
                 </tr>
               ))}

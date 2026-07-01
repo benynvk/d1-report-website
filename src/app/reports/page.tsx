@@ -115,14 +115,16 @@ export default function ReportsPage() {
                     <ul className="entries">
                       {r.entries.map((e) => (
                         <li key={e.id}>
-                          {e.href ? (
-                            <a href={e.href} target="_blank" rel="noreferrer">
-                              {taskLabel(e)}
-                            </a>
-                          ) : (
-                            taskLabel(e)
-                          )}
-                          <span className="muted"> — {e.hours}h</span>
+                          <span className="task-name">
+                            {e.href ? (
+                              <a href={e.href} target="_blank" rel="noreferrer">
+                                {taskLabel(e)}
+                              </a>
+                            ) : (
+                              taskLabel(e)
+                            )}
+                          </span>
+                          <span className="hours-pill">{e.hours}h</span>
                         </li>
                       ))}
                     </ul>
