@@ -132,11 +132,18 @@ export default function HomePage() {
         ) : members.length === 0 ? (
           <div className="empty">No reports in this range.</div>
         ) : (
-          <div className="chart">
+          <div className="bar-chart">
             {members.map((m) => (
-              <div className="chart-row" key={m.memberId}>
-                <span className="chart-name member-cell">
-                  <Avatar name={m.memberName} src={m.avatarUrl} size={26} />
+              <div className="bar-col" key={m.memberId}>
+                <span className="bar-col-value">{round(m.avgPerDay)}h</span>
+                <div className="bar-col-track">
+                  <div
+                    className="bar-col-fill"
+                    style={{ height: `${(m.avgPerDay / maxAvg) * 100}%` }}
+                  />
+                </div>
+                <div className="bar-col-label">
+                  <Avatar name={m.memberName} src={m.avatarUrl} size={30} />
                   <button
                     className="name-link"
                     onClick={() =>
@@ -145,17 +152,8 @@ export default function HomePage() {
                   >
                     {m.memberName}
                   </button>
-                </span>
-                <div className="chart-track">
-                  <div
-                    className="chart-fill"
-                    style={{ width: `${(m.avgPerDay / maxAvg) * 100}%` }}
-                  />
+                  <span className="bar-col-days">{m.daysReported}d</span>
                 </div>
-                <span className="chart-value">
-                  {round(m.avgPerDay)}h/day
-                  <small>{m.daysReported}d</small>
-                </span>
               </div>
             ))}
           </div>

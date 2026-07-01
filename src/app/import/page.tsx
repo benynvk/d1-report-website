@@ -16,6 +16,26 @@ const PLACEHOLDER = `https://offspringdigital.teamwork.com/app/tasks/101: 4
 https://offspringdigital.teamwork.com/app/tasks/102: 2
 Weekly meeting: 1`;
 
+const HOLIDAY_WORDS = [
+  'holiday',
+  'nghỉ',
+  'nghi',
+  'nghỉ phép',
+  'nghỉ cả ngày',
+  'off',
+  'day off',
+  'leave',
+];
+
+/** True when the whole message is just a holiday note (e.g. "Holiday"). */
+function isHolidayNote(text: string): boolean {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '').trim())
+    .filter(Boolean);
+  return lines.length === 1 && HOLIDAY_WORDS.includes(lines[0].toLowerCase());
+}
+
 export default function ImportPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [config, setConfig] = useState<ReportConfig | null>(null);
@@ -44,15 +64,32 @@ export default function ImportPage() {
     return () => clearTimeout(t);
   }, [text]);
 
+  const holidayMode = isHolidayNote(text);
   const hasInvalid = !!preview && preview.invalid.length > 0;
   const canSubmit = useMemo(
-    () => !!memberId && !!text.trim() && !hasInvalid && !saving,
-    [memberId, text, hasInvalid, saving],
+    () => !!memberId && !!text.trim() && (holidayMode || !hasInvalid) && !saving,
+    [memberId, text, holidayMode, hasInvalid, saving],
   );
 
   const submit = async () => {
     setError('');
     setOk('');
+    // A holiday note marks the day off instead of saving a report.
+    if (isHolidayNote(text)) {
+      setSaving(true);
+      try {
+        await api.setAttendance(memberId, date, 'holiday');
+        const who = members.find((m) => m.id === memberId)?.name ?? 'Member';
+        setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
+        setText('');
+        setPreview(null);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     // One report per member per day — confirm before overwriting.
     try {
       const existing = await api.listReports({ date, memberId });
@@ -139,10 +176,17 @@ export default function ImportPage() {
               <span className="btn-spin">
                 <Spinner sm /> Saving…
               </span>
+            ) : holidayMode ? (
+              'Mark holiday'
             ) : (
               'Save report'
             )}
           </button>
+          {holidayMode && (
+            <div className="hint" style={{ marginTop: 8 }}>
+              This marks the member on holiday for the selected day.
+            </div>
+          )}
           {hasInvalid && (
             <div className="hint" style={{ marginTop: 8 }}>
               Fix the highlighted tasks first.
