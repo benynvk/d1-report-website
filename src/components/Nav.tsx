@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/import', label: 'Import' },
   { href: '/members', label: 'Members' },
   { href: '/task-types', label: 'Task Types' },
+  { href: '/wip', label: 'WIP' },
 ];
 
 const LOGO =

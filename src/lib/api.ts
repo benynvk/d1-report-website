@@ -9,6 +9,9 @@ import type {
   ReportConfig,
   SummaryResult,
   TaskType,
+  WipConfig,
+  WipDay,
+  WipStatus,
 } from './types';
 
 const BASE = (
@@ -59,6 +62,7 @@ export const api = {
     email: string;
     avatarUrl?: string | null;
     isSupport?: boolean;
+    wipName?: string | null;
   }) =>
     request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<Member>) =>
@@ -125,4 +129,18 @@ export const api = {
       `/reminders/run${qs({ date })}`,
       { method: 'POST' },
     ),
+
+  // WIP
+  wipStatus: () => request<WipStatus>('/wip/status'),
+  wipDisconnect: () => request<void>('/wip/disconnect', { method: 'POST' }),
+  wipAuthUrl: () => `${BASE}/wip/oauth/start`,
+  listWipConfigs: () => request<WipConfig[]>('/wip/config'),
+  upsertWipConfig: (month: string, spreadsheetUrl: string) =>
+    request<WipConfig>('/wip/config', {
+      method: 'POST',
+      body: JSON.stringify({ month, spreadsheetUrl }),
+    }),
+  deleteWipConfig: (id: string) =>
+    request<void>(`/wip/config/${id}`, { method: 'DELETE' }),
+  wipDay: (date: string) => request<WipDay>(`/wip/day${qs({ date })}`),
 };

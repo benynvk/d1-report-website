@@ -14,6 +14,7 @@ export default function MembersPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isSupport, setIsSupport] = useState(false);
+  const [wipName, setWipName] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,7 @@ export default function MembersPage() {
         email: email.trim(),
         avatarUrl: avatar,
         isSupport,
+        wipName: wipName.trim() || null,
       });
       setMembers((ms) =>
         [...ms, created].sort((a, b) => a.name.localeCompare(b.name)),
@@ -68,6 +70,7 @@ export default function MembersPage() {
       setEmail('');
       setAvatar(null);
       setIsSupport(false);
+      setWipName('');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -104,6 +107,18 @@ export default function MembersPage() {
       await api.updateMember(m.id, { isSupport: next });
     } catch (e: any) {
       patchMember(m.id, { isSupport: m.isSupport }); // revert
+      setError(e.message);
+    }
+  };
+
+  const saveWipName = async (m: Member, value: string) => {
+    const next = value.trim();
+    if (next === (m.wipName ?? '')) return;
+    patchMember(m.id, { wipName: next || null }); // optimistic
+    try {
+      await api.updateMember(m.id, { wipName: next });
+    } catch (e: any) {
+      patchMember(m.id, { wipName: m.wipName }); // revert
       setError(e.message);
     }
   };
@@ -186,6 +201,19 @@ export default function MembersPage() {
                   style={{ width: '100%' }}
                 />
               </div>
+              <div className="field">
+                <label>WIP name (optional)</label>
+                <input
+                  value={wipName}
+                  onChange={(e) => setWipName(e.target.value)}
+                  placeholder="Nguyen Van A (Nickname)"
+                  style={{ width: '100%' }}
+                />
+                <div className="hint">
+                  Must match &quot;Staff&apos;s name&quot; exactly as it appears in the
+                  WIP sheet.
+                </div>
+              </div>
               <label className="checkbox-row">
                 <input
                   type="checkbox"
@@ -220,6 +248,7 @@ export default function MembersPage() {
                   <tr>
                     <th>Name</th>
                     <th>Email</th>
+                    <th>WIP name</th>
                     <th className="c">Supporter</th>
                     <th>Status</th>
                     <th></th>
@@ -249,6 +278,15 @@ export default function MembersPage() {
                         </div>
                       </td>
                       <td>{m.email}</td>
+                      <td className="mid">
+                        <input
+                          key={m.id}
+                          defaultValue={m.wipName ?? ''}
+                          placeholder="not mapped"
+                          onBlur={(e) => saveWipName(m, e.target.value)}
+                          style={{ width: '100%', minWidth: 160 }}
+                        />
+                      </td>
                       <td className="c mid">
                         <input
                           type="checkbox"

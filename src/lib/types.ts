@@ -13,6 +13,7 @@ export interface Member {
   chatUserId: string | null;
   avatarUrl: string | null;
   isSupport: boolean;
+  wipName: string | null;
   active: boolean;
   createdAt: string;
 }
@@ -111,4 +112,33 @@ export interface SummaryResult {
     taskCount: number;
     daysReported: number;
   }[];
+}
+
+export interface WipStatus {
+  connected: boolean;
+  email: string | null;
+}
+
+export interface WipConfig {
+  id: string;
+  month: string; // 'YYYY-MM'
+  spreadsheetUrl: string;
+  createdAt: string;
+}
+
+export interface WipRow {
+  team: string;
+  staffName: string;
+  morning: string;
+  evening: string;
+  memberId: string | null;
+  memberName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface WipDay {
+  date: string;
+  tabName: string;
+  configured: boolean;
+  rows: WipRow[];
 }
