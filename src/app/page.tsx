@@ -20,6 +20,10 @@ const LOGO =
   'https://d1-mobile-app.s3.us-east-1.amazonaws.com/assets/d1_training_logo.png';
 const DAY = 86400000;
 const round = (n: number) => Math.round(n * 10) / 10;
+// Line-chart reveal timing: wait for bars to grow, then connect points one at
+// a time (must match the .line-tasks transition-duration in CSS).
+const LINE_BASE_DELAY = 650;
+const LINE_SEGMENT_MS = 300;
 
 /** Local (VN, UTC+7) date string 'YYYY-MM-DD' for `daysAgo` days back. */
 function isoDaysAgo(days: number): string {
@@ -83,11 +87,18 @@ export default function HomePage() {
     avgPerDay: m.daysReported ? m.totalHours / m.daysReported : 0,
   }));
   const maxAvg = members.reduce((m, x) => Math.max(m, x.avgPerDay), 0) || 1;
-  const maxTasks = members.reduce((m, x) => Math.max(m, x.taskCount), 0) || 1;
   const N = members.length;
+  const tasksArr = members.map((m) => m.taskCount);
+  const minTasks = Math.min(...tasksArr, 0);
+  const maxTasks = Math.max(...tasksArr, 1);
   const px = (i: number) => ((i + 0.5) / N) * 100;
-  const py = (val: number) => 45 + (1 - val / maxTasks) * 50;
-  const tasksPts = members.map((m, i) => `${px(i)},${py(m.taskCount)}`);
+  // Normalize into a band centered on the vertical middle of the bar (40..84)
+  // so small variations don't look flat, without floating too high.
+  const py = (val: number) =>
+    maxTasks === minTasks
+      ? 62
+      : 40 + (1 - (val - minTasks) / (maxTasks - minTasks)) * 44;
+  const tasksPts = members.map((m, i) => ({ x: px(i), y: py(m.taskCount) }));
 
   // Re-run the grow animation whenever the chart data changes.
   useEffect(() => {
@@ -187,26 +198,50 @@ export default function HomePage() {
                   </div>
                 );
               })}
-              {/* Overlaid line: total tasks per member across the range */}
+              {/* Overlaid line: total tasks per member. Segments draw one at
+                  a time, left to right — each starts only once the previous
+                  one has finished (no overlap). */}
               <svg
                 className="bar-line-overlay"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
-                <polyline
-                  className={`line-tasks${grown ? ' grown' : ''}`}
-                  points={tasksPts.join(' ')}
-                  pathLength={100}
-                />
+                {tasksPts.slice(1).map((p, i) => {
+                  const prev = tasksPts[i];
+                  return (
+                    <line
+                      key={i}
+                      className={`line-tasks${grown ? ' grown' : ''}`}
+                      x1={prev.x}
+                      y1={prev.y}
+                      x2={p.x}
+                      y2={p.y}
+                      pathLength={1}
+                      style={{ transitionDelay: `${LINE_BASE_DELAY + i * LINE_SEGMENT_MS}ms` }}
+                    />
+                  );
+                })}
               </svg>
               <div className="line-labels">
                 {members.map((m, i) => (
                   <span
                     key={m.memberId}
+                    className={`line-dot${grown ? ' grown' : ''}`}
+                    style={{
+                      left: `${tasksPts[i].x}%`,
+                      top: `${tasksPts[i].y}%`,
+                      transitionDelay: `${LINE_BASE_DELAY + i * LINE_SEGMENT_MS}ms`,
+                    }}
+                  />
+                ))}
+                {members.map((m, i) => (
+                  <span
+                    key={m.memberId}
                     className={`line-label${grown ? ' grown' : ''}`}
                     style={{
-                      left: `${px(i)}%`,
-                      top: `${py(m.taskCount)}%`,
+                      left: `${tasksPts[i].x}%`,
+                      top: `${tasksPts[i].y}%`,
+                      transitionDelay: `${LINE_BASE_DELAY + i * LINE_SEGMENT_MS}ms`,
                     }}
                   >
                     {m.taskCount}
