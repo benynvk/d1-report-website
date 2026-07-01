@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useConfirm } from '@/components/Confirm';
-import { Spinner } from '@/components/Spinner';
+import { Loading, Spinner } from '@/components/Spinner';
 import type { TaskType } from '@/lib/types';
 
 export default function TaskTypesPage() {
@@ -11,10 +11,16 @@ export default function TaskTypesPage() {
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const confirm = useConfirm();
 
   const load = () => {
-    api.listTaskTypes().then(setTypes).catch((e) => setError(e.message));
+    setLoading(true);
+    api
+      .listTaskTypes()
+      .then(setTypes)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   };
   useEffect(load, []);
 

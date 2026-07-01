@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useConfirm } from '@/components/Confirm';
-import { Spinner } from '@/components/Spinner';
+import { Loading, Spinner } from '@/components/Spinner';
 import type { Member } from '@/lib/types';
 
 export default function MembersPage() {
@@ -12,10 +12,16 @@ export default function MembersPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const confirm = useConfirm();
 
   const load = () => {
-    api.listMembers().then(setMembers).catch((e) => setError(e.message));
+    setLoading(true);
+    api
+      .listMembers()
+      .then(setMembers)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   };
   useEffect(load, []);
 
@@ -113,7 +119,9 @@ export default function MembersPage() {
         <div className="col">
           <div className="panel">
             <div className="panel-head">{members.length} member(s)</div>
-            {members.length === 0 ? (
+            {loading ? (
+              <Loading />
+            ) : members.length === 0 ? (
               <div className="empty">No members yet.</div>
             ) : (
               <table>

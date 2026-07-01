@@ -60,7 +60,6 @@ export default function HomePage() {
 
   const members = summary?.members ?? [];
   const maxHours = members.reduce((m, x) => Math.max(m, x.totalHours), 0) || 1;
-  const totalHours = members.reduce((s, m) => s + m.totalHours, 0);
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -107,23 +106,6 @@ export default function HomePage() {
       </div>
 
       {error && <div className="alert error">{error}</div>}
-
-      <div className="cards">
-        <div className="card">
-          <div className="label">Total hours</div>
-          <div className="value">{round(totalHours)}h</div>
-        </div>
-        <div className="card">
-          <div className="label">Active members</div>
-          <div className="value">{members.length}</div>
-        </div>
-        <div className="card">
-          <div className="label">Avg / member</div>
-          <div className="value">
-            {members.length ? round(totalHours / members.length) : 0}h
-          </div>
-        </div>
-      </div>
 
       <div className="panel" style={{ marginBottom: 22 }}>
         <div className="panel-head">Hours by member</div>

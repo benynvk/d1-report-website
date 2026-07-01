@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
 
 const LINKS = [
-  { href: '/', label: 'Daily Overview' },
+  { href: '/', label: 'Home' },
   { href: '/reports', label: 'Reports' },
   { href: '/import', label: 'Import' },
   { href: '/members', label: 'Members' },
@@ -23,10 +23,10 @@ export function Nav() {
 
   return (
     <aside className="sidebar">
-      <div className="brand">
+      <Link href="/" className="brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={LOGO} alt="D1 Training" className="brand-logo" />
-      </div>
+      </Link>
       <nav>
         {LINKS.map((l) => {
           const active =
