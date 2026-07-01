@@ -875,12 +875,17 @@ label {
   min-width: 0;
 }
 .bar-col-value {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
   font-weight: 700;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .bar-col-track {
+  position: relative;
   width: 100%;
   max-width: 150px;
   height: 190px;
@@ -888,7 +893,6 @@ label {
   align-items: flex-end;
   background: var(--primary-weak);
   border-radius: 12px;
-  overflow: hidden;
 }
 .bar-col-fill {
   width: 100%;

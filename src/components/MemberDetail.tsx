@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, taskLabel } from '@/lib/format';
 import type { DailyReport } from '@/lib/types';
@@ -32,6 +32,8 @@ export function MemberDetail({
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(PAGE);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -47,6 +49,21 @@ export function MemberDetail({
       .catch(() => setReports([]))
       .finally(() => setLoading(false));
   }, [memberId]);
+
+  // Infinite scroll inside the popup: reveal more as the sentinel appears.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!el || !root) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisible((v) => v + PAGE);
+      },
+      { root, rootMargin: '150px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loading, reports]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -70,8 +87,7 @@ export function MemberDetail({
         ) : reports.length === 0 ? (
           <div className="empty">No records yet.</div>
         ) : (
-          <>
-          <div className="record-list record-scroll">
+          <div className="record-list record-scroll" ref={scrollRef}>
             {reports.slice(0, visible).map((r) => (
               <div className="record-day" key={r.id}>
                 <div className="record-day-head">
@@ -96,17 +112,16 @@ export function MemberDetail({
                 </ul>
               </div>
             ))}
+            {visible < reports.length && (
+              <div
+                ref={sentinelRef}
+                style={{ padding: 8, textAlign: 'center' }}
+                className="muted"
+              >
+                Loading more…
+              </div>
+            )}
           </div>
-          {visible < reports.length && (
-            <button
-              className="btn ghost block"
-              style={{ marginTop: 14 }}
-              onClick={() => setVisible((v) => v + PAGE)}
-            >
-              Load more ({reports.length - visible} left)
-            </button>
-          )}
-          </>
         )}
       </div>
     </div>

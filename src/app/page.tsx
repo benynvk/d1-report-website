@@ -140,12 +140,20 @@ export default function HomePage() {
           <div className="empty">No reports in this range.</div>
         ) : (
           <div className="bar-chart">
-            {members.map((m) => (
+            {members.map((m) => {
+              const pct = (m.avgPerDay / maxAvg) * 100;
+              return (
               <div className="bar-col" key={m.memberId}>
                 <div className="bar-col-track">
+                  <span
+                    className="bar-col-value"
+                    style={{ bottom: `calc(${pct}% + 10px)` }}
+                  >
+                    {round(m.avgPerDay)}h
+                  </span>
                   <div
                     className="bar-col-fill"
-                    style={{ height: `${(m.avgPerDay / maxAvg) * 100}%` }}
+                    style={{ height: `${pct}%` }}
                   >
                     <span className="bar-col-onbar">
                       {m.taskCount} tasks
@@ -181,7 +189,8 @@ export default function HomePage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
