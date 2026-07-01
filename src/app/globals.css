@@ -838,6 +838,11 @@ label {
   display: inline-flex;
   gap: 6px;
 }
+.date-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .preset-btn {
   padding: 6px 12px;
   border-radius: 8px;
@@ -867,10 +872,10 @@ label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
-  min-width: 72px;
-  max-width: 120px;
+  min-width: 96px;
+  max-width: 160px;
 }
 .bar-col-value {
   font-weight: 700;
@@ -881,20 +886,31 @@ label {
 }
 .bar-col-track {
   width: 100%;
-  max-width: 52px;
-  height: 150px;
+  max-width: 96px;
+  height: 170px;
   display: flex;
   align-items: flex-end;
   background: var(--primary-weak);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
 }
 .bar-col-fill {
   width: 100%;
   background: linear-gradient(180deg, var(--primary), var(--btn-primary-bg));
-  border-radius: 10px;
+  border-radius: 12px;
   min-height: 4px;
   transition: height 0.4s ease;
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+.bar-col-onbar {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .bar-col-label {
   display: flex;
@@ -986,7 +1002,7 @@ label {
   border-bottom: none;
 }
 .yday-name {
-  width: 150px;
+  width: 92px;
   flex-shrink: 0;
   font-weight: 600;
 }

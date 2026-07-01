@@ -94,7 +94,7 @@ export default function HomePage() {
         <h1 className="home-title">Workload Dashboard</h1>
       </div>
 
-      <div className="toolbar">
+      <div className="toolbar" style={{ justifyContent: 'flex-end' }}>
         <div className="preset-group">
           {PRESETS.map((p) => (
             <button
@@ -106,21 +106,23 @@ export default function HomePage() {
             </button>
           ))}
         </div>
-        <DateField
-          value={from}
-          onChange={(v) => {
-            setPreset(0);
-            setFrom(v);
-          }}
-        />
-        <span className="muted">→</span>
-        <DateField
-          value={to}
-          onChange={(v) => {
-            setPreset(0);
-            setTo(v);
-          }}
-        />
+        <div className="date-range">
+          <DateField
+            value={from}
+            onChange={(v) => {
+              setPreset(0);
+              setFrom(v);
+            }}
+          />
+          <span className="muted">→</span>
+          <DateField
+            value={to}
+            onChange={(v) => {
+              setPreset(0);
+              setTo(v);
+            }}
+          />
+        </div>
       </div>
 
       {error && <div className="alert error">{error}</div>}
@@ -135,12 +137,18 @@ export default function HomePage() {
           <div className="bar-chart">
             {members.map((m) => (
               <div className="bar-col" key={m.memberId}>
-                <span className="bar-col-value">{round(m.avgPerDay)}h</span>
+                <span className="bar-col-value">{round(m.avgPerDay)}h/day</span>
                 <div className="bar-col-track">
                   <div
                     className="bar-col-fill"
                     style={{ height: `${(m.avgPerDay / maxAvg) * 100}%` }}
-                  />
+                  >
+                    <span className="bar-col-onbar">
+                      {m.taskCount} tasks
+                      <br />
+                      {round(m.totalHours)}h
+                    </span>
+                  </div>
                 </div>
                 <div className="bar-col-label">
                   <span
