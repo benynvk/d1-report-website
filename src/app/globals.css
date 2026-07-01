@@ -601,6 +601,11 @@ a:hover {
 td.mid {
   vertical-align: middle;
 }
+.wrap-cell {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 th.c,
 td.c {
   text-align: center;

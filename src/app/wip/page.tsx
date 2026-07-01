@@ -222,13 +222,15 @@ function WipPageInner() {
                 <tbody>
                   {configs.map((c) => (
                     <tr key={c.id}>
-                      <td style={{ fontWeight: 600 }}>{monthLabel(c.month)}</td>
-                      <td>
+                      <td className="mid" style={{ fontWeight: 600 }}>
+                        {monthLabel(c.month)}
+                      </td>
+                      <td className="mid">
                         <a href={c.spreadsheetUrl} target="_blank" rel="noreferrer">
                           Open sheet
                         </a>
                       </td>
-                      <td className="c">
+                      <td className="c mid">
                         <button
                           className="btn danger sm"
                           onClick={() => removeConfig(c)}
@@ -265,7 +267,13 @@ function WipPageInner() {
                 No tab named &quot;{day.tabName}&quot; in this sheet (weekend/holiday?).
               </div>
             ) : (
-              <table>
+              <table style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '35%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Staff</th>
@@ -277,7 +285,7 @@ function WipPageInner() {
                 <tbody>
                   {day.rows.map((r, i) => (
                     <tr key={i}>
-                      <td className="mid">
+                      <td>
                         <div className="member-cell">
                           {r.memberId ? (
                             <Avatar name={r.memberName!} src={r.avatarUrl} size={26} />
@@ -292,9 +300,9 @@ function WipPageInner() {
                           </div>
                         )}
                       </td>
-                      <td className="mid">{r.team}</td>
-                      <td style={{ whiteSpace: 'pre-wrap' }}>{r.morning}</td>
-                      <td style={{ whiteSpace: 'pre-wrap' }}>{r.evening}</td>
+                      <td>{r.team}</td>
+                      <td className="wrap-cell">{r.morning}</td>
+                      <td className="wrap-cell">{r.evening}</td>
                     </tr>
                   ))}
                 </tbody>
