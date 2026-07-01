@@ -177,9 +177,12 @@ a:hover {
   border: none;
   background: transparent;
   border-radius: 8px;
-  font-size: 18px;
   line-height: 1;
   cursor: pointer;
+  color: var(--muted);
+}
+.theme-toggle:hover {
+  color: var(--text);
 }
 .theme-toggle:hover {
   background: var(--bg);
