@@ -168,6 +168,17 @@ a:hover {
   display: block;
 }
 
+/* Square icon-only button (e.g. page-head settings gear) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
 /* Theme toggle — icon only */
 .theme-toggle {
   display: flex;
