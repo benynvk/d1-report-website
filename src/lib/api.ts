@@ -1,6 +1,7 @@
 import type {
   Attendance,
   AttendanceStatus,
+  ChatMember,
   DailyOverview,
   DailyReport,
   Member,
@@ -138,4 +139,10 @@ export const api = {
   deleteWipConfig: (id: string) =>
     request<void>(`/wip/config/${id}`, { method: 'DELETE' }),
   wipDay: (date: string) => request<WipDay>(`/wip/day${qs({ date })}`),
+  wipChatMembers: () => request<ChatMember[]>('/wip/chat-members'),
+  checkWipReminder: (date?: string) =>
+    request<{ date: string; missingToday: string[]; missingPrevEvening: string[] }>(
+      `/wip/check-reminder${qs({ date })}`,
+      { method: 'POST' },
+    ),
 };

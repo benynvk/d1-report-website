@@ -47,6 +47,7 @@ function WipPageInner() {
 
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
+  const [checking, setChecking] = useState(false);
 
   const loadStatus = () => {
     api.wipStatus().then(setStatus).catch(() => {});
@@ -111,6 +112,29 @@ function WipPageInner() {
       setError(e.message);
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const checkWip = async () => {
+    setError('');
+    setOk('');
+    setChecking(true);
+    try {
+      const result = await api.checkWipReminder();
+      if (result.missingToday.length === 0 && result.missingPrevEvening.length === 0) {
+        setOk(`No one missing WIP for ${result.date} — nothing sent.`);
+      } else {
+        const parts: string[] = [];
+        if (result.missingPrevEvening.length)
+          parts.push(`evening (prev day): ${result.missingPrevEvening.join(', ')}`);
+        if (result.missingToday.length)
+          parts.push(`morning: ${result.missingToday.join(', ')}`);
+        setOk(`Reminder sent — ${parts.join(' · ')}`);
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -248,9 +272,26 @@ function WipPageInner() {
 
         <div className="col">
           <div className="panel">
-            <div className="panel-head" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              className="panel-head"
+              style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+            >
               <span>WIP — {formatDate(date)}</span>
               <DateField value={date} onChange={setDate} />
+              <button
+                className="btn ghost sm"
+                onClick={checkWip}
+                disabled={checking}
+                style={{ marginLeft: 'auto' }}
+              >
+                {checking ? (
+                  <span className="btn-spin">
+                    <Spinner sm /> Checking…
+                  </span>
+                ) : (
+                  'Check WIP'
+                )}
+              </button>
             </div>
             {dayLoading ? (
               <Loading />

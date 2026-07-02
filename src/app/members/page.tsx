@@ -20,6 +20,8 @@ export default function MembersPage() {
   const [autoWip, setAutoWip] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Member | null>(null);
@@ -159,6 +161,38 @@ export default function MembersPage() {
     }
   };
 
+  const syncChatIds = async () => {
+    setError('');
+    setSyncMessage('');
+    setSyncing(true);
+    try {
+      const chatMembers = await api.wipChatMembers();
+      const byEmail = new Map(
+        chatMembers
+          .filter((c) => c.email)
+          .map((c) => [c.email!.trim().toLowerCase(), c.chatUserId]),
+      );
+      let updated = 0;
+      for (const m of members) {
+        const match = byEmail.get(m.email.trim().toLowerCase());
+        if (match && match !== m.chatUserId) {
+          await api.updateMember(m.id, { chatUserId: match });
+          patchMember(m.id, { chatUserId: match });
+          updated++;
+        }
+      }
+      setSyncMessage(
+        updated > 0
+          ? `Synced ${updated} member(s) by email.`
+          : 'No matches — no member emails matched a Chat member email.',
+      );
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const remove = async (m: Member) => {
     const ok = await confirm({
       title: `Delete ${m.name}?`,
@@ -186,12 +220,24 @@ export default function MembersPage() {
             unregistered email is blocked.
           </p>
         </div>
-        <button className="btn" onClick={() => setShowAdd(true)}>
-          + Add
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn ghost" onClick={syncChatIds} disabled={syncing}>
+            {syncing ? (
+              <span className="btn-spin">
+                <Spinner sm /> Syncing…
+              </span>
+            ) : (
+              'Sync Google Chat ID'
+            )}
+          </button>
+          <button className="btn" onClick={() => setShowAdd(true)}>
+            + Add
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert error">{error}</div>}
+      {syncMessage && <div className="alert ok">{syncMessage}</div>}
 
       <div className="panel">
         <div className="panel-head">{members.length} member(s)</div>
@@ -254,8 +300,8 @@ export default function MembersPage() {
                   <td className="mid">
                     <input
                       key={m.id}
-                      defaultValue={m.chatUserId ?? ''}
-                      placeholder="users/1234567890"
+                      defaultValue={(m.chatUserId ?? '').replace(/^users\//, '')}
+                      placeholder="1234567890"
                       onBlur={(e) => saveChatUserId(m, e.target.value)}
                       style={{ width: '100%', minWidth: 170 }}
                     />

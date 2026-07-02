@@ -143,3 +143,9 @@ export interface WipDay {
   configured: boolean;
   rows: WipRow[];
 }
+
+export interface ChatMember {
+  chatUserId: string;
+  displayName: string;
+  email: string | null;
+}
