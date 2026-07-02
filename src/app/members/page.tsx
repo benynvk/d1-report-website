@@ -20,6 +20,7 @@ export default function MembersPage() {
   const [autoWip, setAutoWip] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
   const [syncMessage, setSyncMessage] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,15 @@ export default function MembersPage() {
   // In-place state update so toggles/avatar don't reload (and re-spinner) the list.
   const patchMember = (id: string, patch: Partial<Member>) =>
     setMembers((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+
+  const showSaved = () => {
+    setSavedMessage('Cập nhật thành công');
+    setTimeout(() => setSavedMessage(''), 2000);
+  };
+
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') e.currentTarget.blur();
+  };
 
   const resetAddForm = () => {
     setName('');
@@ -131,6 +141,7 @@ export default function MembersPage() {
     patchMember(m.id, { wipName: next || null }); // optimistic
     try {
       await api.updateMember(m.id, { wipName: next });
+      showSaved();
     } catch (e: any) {
       patchMember(m.id, { wipName: m.wipName }); // revert
       setError(e.message);
@@ -143,6 +154,7 @@ export default function MembersPage() {
     patchMember(m.id, { teamworkEmail: next || null }); // optimistic
     try {
       await api.updateMember(m.id, { teamworkEmail: next });
+      showSaved();
     } catch (e: any) {
       patchMember(m.id, { teamworkEmail: m.teamworkEmail }); // revert
       setError(e.message);
@@ -155,6 +167,7 @@ export default function MembersPage() {
     patchMember(m.id, { chatUserId: next || null }); // optimistic
     try {
       await api.updateMember(m.id, { chatUserId: next });
+      showSaved();
     } catch (e: any) {
       patchMember(m.id, { chatUserId: m.chatUserId }); // revert
       setError(e.message);
@@ -177,10 +190,10 @@ export default function MembersPage() {
         const match = byEmail.get(m.email.trim().toLowerCase());
         if (match && match !== m.chatUserId) {
           await api.updateMember(m.id, { chatUserId: match });
-          patchMember(m.id, { chatUserId: match });
           updated++;
         }
       }
+      if (updated > 0) load(); // remount rows so the (uncontrolled) inputs reflect the new values
       setSyncMessage(
         updated > 0
           ? `Synced ${updated} member(s) by email.`
@@ -220,7 +233,12 @@ export default function MembersPage() {
             unregistered email is blocked.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {savedMessage && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              {savedMessage}
+            </span>
+          )}
           <button className="btn ghost" onClick={syncChatIds} disabled={syncing}>
             {syncing ? (
               <span className="btn-spin">
@@ -286,6 +304,7 @@ export default function MembersPage() {
                       defaultValue={m.teamworkEmail ?? ''}
                       placeholder={m.email}
                       onBlur={(e) => saveTeamworkEmail(m, e.target.value)}
+                      onKeyDown={blurOnEnter}
                       style={{ width: '100%', minWidth: 180 }}
                     />
                   </td>
@@ -294,6 +313,7 @@ export default function MembersPage() {
                       key={m.id}
                       defaultValue={m.wipName ?? ''}
                       onBlur={(e) => saveWipName(m, e.target.value)}
+                      onKeyDown={blurOnEnter}
                       style={{ width: '100%', minWidth: 160 }}
                     />
                   </td>
@@ -303,6 +323,7 @@ export default function MembersPage() {
                       defaultValue={(m.chatUserId ?? '').replace(/^users\//, '')}
                       placeholder="1234567890"
                       onBlur={(e) => saveChatUserId(m, e.target.value)}
+                      onKeyDown={blurOnEnter}
                       style={{ width: '100%', minWidth: 170 }}
                     />
                   </td>
