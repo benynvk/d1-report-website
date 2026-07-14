@@ -1,3 +1,5 @@
+export type MemberRole = 'full_time' | 'part_time' | 'support';
+
 export interface Project {
   id: string;
   name: string;
@@ -12,7 +14,7 @@ export interface Member {
   email: string;
   chatUserId: string | null;
   avatarUrl: string | null;
-  isSupport: boolean;
+  role: MemberRole;
   wipName: string | null;
   teamworkEmail: string | null;
   autoWip: boolean;
@@ -58,7 +60,7 @@ export interface MemberDayStat {
   memberId: string;
   memberName: string;
   avatarUrl: string | null;
-  isSupport: boolean;
+  role: MemberRole;
   status: AttendanceStatus | null;
   reported: boolean;
   totalHours: number;

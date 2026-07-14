@@ -7,14 +7,21 @@ import { Loading, Spinner } from '@/components/Spinner';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
 import { resizeImage } from '@/lib/image';
-import type { Member } from '@/lib/types';
+import type { Member, MemberRole } from '@/lib/types';
+
+const ROLE_LABELS: Record<MemberRole, string> = {
+  full_time: 'Full-time',
+  part_time: 'Part-time',
+  support: 'Support',
+};
+const ROLE_OPTIONS: MemberRole[] = ['full_time', 'part_time', 'support'];
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [isSupport, setIsSupport] = useState(false);
+  const [role, setRole] = useState<MemberRole>('full_time');
   const [wipName, setWipName] = useState('');
   const [teamworkEmail, setTeamworkEmail] = useState('');
   const [autoWip, setAutoWip] = useState(false);
@@ -67,7 +74,7 @@ export default function MembersPage() {
     setName('');
     setEmail('');
     setAvatar(null);
-    setIsSupport(false);
+    setRole('full_time');
     setWipName('');
     setTeamworkEmail('');
     setAutoWip(false);
@@ -85,7 +92,7 @@ export default function MembersPage() {
         name: name.trim(),
         email: email.trim(),
         avatarUrl: avatar,
-        isSupport,
+        role,
         wipName: wipName.trim() || null,
         teamworkEmail: teamworkEmail.trim() || undefined,
         autoWip,
@@ -113,13 +120,15 @@ export default function MembersPage() {
     }
   };
 
-  const toggleSupport = async (m: Member) => {
-    const next = !m.isSupport;
-    patchMember(m.id, { isSupport: next }); // optimistic
+  const saveRole = async (m: Member, next: MemberRole) => {
+    if (next === m.role) return;
+    const prev = m.role;
+    patchMember(m.id, { role: next }); // optimistic
     try {
-      await api.updateMember(m.id, { isSupport: next });
+      await api.updateMember(m.id, { role: next });
+      showSaved();
     } catch (e: any) {
-      patchMember(m.id, { isSupport: m.isSupport }); // revert
+      patchMember(m.id, { role: prev }); // revert
       setError(e.message);
     }
   };
@@ -273,7 +282,7 @@ export default function MembersPage() {
                 <th className="c">WIP name</th>
                 <th className="c">Chat ID</th>
                 <th className="c">Auto WIP</th>
-                <th className="c">Supporter</th>
+                <th className="c">Role</th>
                 <th className="c"></th>
               </tr>
             </thead>
@@ -336,12 +345,16 @@ export default function MembersPage() {
                     />
                   </td>
                   <td className="c mid">
-                    <input
-                      type="checkbox"
-                      checked={!!m.isSupport}
-                      onChange={() => toggleSupport(m)}
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                    />
+                    <select
+                      value={m.role}
+                      onChange={(e) => saveRole(m, e.target.value as MemberRole)}
+                    >
+                      {ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABELS[r]}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <button className="btn danger sm" onClick={() => remove(m)}>
@@ -440,14 +453,21 @@ export default function MembersPage() {
               />
               <div className="hint">Only needed if different from Email above.</div>
             </div>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={isSupport}
-                onChange={(e) => setIsSupport(e.target.checked)}
-              />
-              <span>Support member (skip daily reminders)</span>
-            </label>
+            <div className="field">
+              <label>Role</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as MemberRole)}
+                style={{ width: '100%' }}
+              >
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+              <div className="hint">Support members skip daily reminders.</div>
+            </div>
             <label className="checkbox-row">
               <input
                 type="checkbox"

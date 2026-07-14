@@ -62,7 +62,7 @@ export const api = {
     name: string;
     email: string;
     avatarUrl?: string | null;
-    isSupport?: boolean;
+    role?: Member['role'];
     wipName?: string | null;
     teamworkEmail?: string;
     autoWip?: boolean;

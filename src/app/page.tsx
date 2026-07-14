@@ -336,7 +336,7 @@ function DayPanel({
                   {m.status === 'holiday' ? (
                     <span className="badge holiday">Holiday</span>
                   ) : !m.reported ? (
-                    m.isSupport ? (
+                    m.role === 'support' ? (
                       <span className="badge">Support</span>
                     ) : (
                       <span className="badge pending">Not reported</span>
