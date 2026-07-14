@@ -179,6 +179,41 @@ a:hover {
   flex-shrink: 0;
 }
 
+.row-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.row-remove-btn:hover:not(:disabled) {
+  color: var(--red, #e5484d);
+}
+
+/* Resolved Teamwork link preview — replaces the raw-URL input once a title
+   is known, styled to match input/select so it doesn't look like a new
+   element type. */
+.link-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+.link-preview-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Theme toggle — icon only */
 .theme-toggle {
   display: flex;
@@ -213,6 +248,8 @@ a:hover {
 }
 .select-btn {
   width: 100%;
+  display: flex;
+  align-items: center;
   text-align: left;
   padding: 8px 32px 8px 11px;
   border: 1px solid var(--border);
@@ -221,6 +258,9 @@ a:hover {
   color: var(--text);
   cursor: pointer;
   position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .select-btn.placeholder {
   color: var(--muted);
@@ -712,6 +752,14 @@ td.c {
   box-shadow: var(--shadow);
   overflow-x: auto;
 }
+/* Like .panel, but no overflow-x — needed when a table cell holds a
+   popover (e.g. the row Select dropdowns) that must overlay past the
+   frame's edge instead of getting clipped. */
+.table-frame {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
 .panel-head {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
@@ -743,6 +791,22 @@ tbody tr:last-child td {
 .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Add-report task rows: every cell holds a single-line control, so center
+   the header labels and vertically center row content instead of the
+   default top/left table alignment. Horizontal padding is half of the
+   Member/Date field-row gap (14px) so adjacent columns read the same
+   distance apart as those fields do. */
+.report-table th,
+.report-table td {
+  padding: 10px 7px;
+}
+.report-table th {
+  text-align: center;
+}
+.report-table td {
+  vertical-align: middle;
 }
 
 /* Bits */

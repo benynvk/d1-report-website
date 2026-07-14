@@ -90,6 +90,8 @@ export const api = {
   listReports: (params: Record<string, string | undefined>) =>
     request<DailyReport[]>(`/reports${qs(params)}`),
   reportConfig: () => request<ReportConfig>('/reports/config'),
+  resolveTaskTitle: (url: string) =>
+    request<{ title: string | null }>(`/reports/resolve-title${qs({ url })}`),
   previewReport: (text: string) =>
     request<PreviewResult>('/reports/preview', {
       method: 'POST',
@@ -115,10 +117,11 @@ export const api = {
     memberId: string,
     date: string,
     status: AttendanceStatus | 'none',
+    hours?: number,
   ) =>
     request<Attendance | null>('/attendance', {
       method: 'POST',
-      body: JSON.stringify({ memberId, date, status }),
+      body: JSON.stringify({ memberId, date, status, hours }),
     }),
 
   // Stats

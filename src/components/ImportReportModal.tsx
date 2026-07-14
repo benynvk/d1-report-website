@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Select } from './Select';
-import { Spinner } from './Spinner';
+import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 import { DateField } from './DateField';
 import { formatDate } from '@/lib/format';
@@ -20,36 +20,80 @@ interface RowState {
   type: EntryType;
   link: string;
   otherTask: string;
+  note: string;
   hours: string;
+  /** Resolved Teamwork task title, previewed in place of the raw link once
+   * known. undefined = not looked up yet; null = looked up, not found. */
+  previewTitle?: string | null;
 }
 
 function makeRow(): RowState {
-  return { key: crypto.randomUUID(), type: 'teamwork', link: '', otherTask: '', hours: '' };
+  return {
+    key: crypto.randomUUID(),
+    type: 'teamwork',
+    link: '',
+    otherTask: '',
+    note: '',
+    hours: '',
+    previewTitle: undefined,
+  };
 }
 
 /** A row counts as "touched" once any field has content — used to tell an
  * intentionally-filled-in row from a still-blank spare one. */
 function isRowTouched(r: RowState): boolean {
-  return !!r.link.trim() || !!r.otherTask.trim() || !!r.hours.trim();
+  return !!r.link.trim() || !!r.otherTask.trim() || !!r.note.trim() || !!r.hours.trim();
 }
 
-function isRowValid(r: RowState): boolean {
+/** A Teamwork link must be on the configured domain and look like an
+ * actual task link (".../app/tasks/<id>"), not just any URL. */
+function isValidTeamworkLink(link: string, taskUrlPrefix?: string): boolean {
+  if (!taskUrlPrefix || !link.startsWith(taskUrlPrefix)) return false;
+  return /\/app\/tasks\/\d+/.test(link);
+}
+
+function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
   const hours = parseFloat(r.hours);
   if (!r.hours.trim() || Number.isNaN(hours) || hours <= 0) return false;
-  return r.type === 'teamwork' ? !!r.link.trim() : !!r.otherTask.trim();
+  if (r.type === 'teamwork') return isValidTeamworkLink(r.link.trim(), taskUrlPrefix);
+  return !!r.otherTask.trim();
 }
 
 /** Serializes a valid row into the "<link or task>: <hours>" line the
- * backend's report-text parser already understands. */
+ * backend's report-text parser already understands. A note (if any) rides
+ * along in the task-name text ("<link/task> - <note>") — there's no
+ * dedicated note column server-side, so it round-trips through taskName. */
 function rowToLine(r: RowState): string {
-  const label = r.type === 'teamwork' ? r.link.trim() : r.otherTask.trim();
+  const base = r.type === 'teamwork' ? r.link.trim() : r.otherTask.trim();
+  const label = r.note.trim() ? `${base} - ${r.note.trim()}` : base;
   return `${label}: ${r.hours.trim()}`;
+}
+
+/** Recovers {otherTask, note} from a saved "other" entry's taskName. */
+function splitOtherTaskName(
+  taskName: string,
+  allowed: string[],
+): { otherTask: string; note: string } {
+  for (const opt of allowed) {
+    if (taskName === opt) return { otherTask: opt, note: '' };
+    if (taskName.startsWith(`${opt} - `)) {
+      return { otherTask: opt, note: taskName.slice(opt.length + 3) };
+    }
+  }
+  return { otherTask: taskName, note: '' };
+}
+
+/** Recovers the note (if any) from a saved Teamwork entry's taskName. */
+function splitTeamworkNote(taskName: string): string {
+  return (taskName ?? '').trim().replace(/^[-–]\s*/, '');
 }
 
 const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = {
   full_time: 7,
   part_time: 3.5,
 };
+
+const LEAVE_HOUR_OPTIONS = [2, 4, 8] as const;
 
 /** Popup: build a structured task list for a member/day, prefilled with
  * whatever is already saved so re-saving intentionally overwrites it. */
@@ -65,7 +109,8 @@ export function ImportReportModal({
   const [memberId, setMemberId] = useState('');
   const [date, setDate] = useState(today());
   const [rows, setRows] = useState<RowState[]>([makeRow()]);
-  const [holidayMode, setHolidayMode] = useState(false);
+  const [leaveHours, setLeaveHours] = useState<number | null>(null);
+  const [hadExistingLeave, setHadExistingLeave] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -83,11 +128,13 @@ export function ImportReportModal({
   }, [onClose]);
 
   // Load whatever is already saved for this member/day so save intentionally
-  // overwrites it rather than silently clobbering unseen data.
+  // overwrites it rather than silently clobbering unseen data. Waits on
+  // `config` so "other task" rows can be split back into task + note.
   useEffect(() => {
     if (!memberId || !date) {
       setRows([makeRow()]);
-      setHolidayMode(false);
+      setLeaveHours(null);
+      setHadExistingLeave(false);
       return;
     }
     let cancelled = false;
@@ -99,17 +146,36 @@ export function ImportReportModal({
       .then(([reports, attendance]) => {
         if (cancelled) return;
         const already = attendance.find((a) => a.member.id === memberId);
-        setHolidayMode(already?.status === 'holiday');
+        const isLeave = already?.status === 'holiday';
+        setHadExistingLeave(isLeave);
+        setLeaveHours(isLeave ? already?.hours ?? 8 : null);
+
+        const allowed = config?.noUrlAllowedTasks ?? [];
         const report = reports[0];
         if (report && report.entries.length > 0) {
           setRows(
-            report.entries.map((e) => ({
-              key: crypto.randomUUID(),
-              type: e.href ? 'teamwork' : 'other',
-              link: e.href ?? '',
-              otherTask: e.href ? '' : e.taskName,
-              hours: String(e.hours),
-            })),
+            report.entries.map((e) => {
+              if (e.href) {
+                return {
+                  key: crypto.randomUUID(),
+                  type: 'teamwork' as const,
+                  link: e.href,
+                  otherTask: '',
+                  note: splitTeamworkNote(e.taskName),
+                  hours: String(e.hours),
+                  previewTitle: e.resolvedTitle ?? null,
+                };
+              }
+              const { otherTask, note } = splitOtherTaskName(e.taskName, allowed);
+              return {
+                key: crypto.randomUUID(),
+                type: 'other' as const,
+                link: '',
+                otherTask,
+                note,
+                hours: String(e.hours),
+              };
+            }),
           );
         } else {
           setRows([makeRow()]);
@@ -124,7 +190,7 @@ export function ImportReportModal({
     return () => {
       cancelled = true;
     };
-  }, [memberId, date]);
+  }, [memberId, date, config]);
 
   const updateRow = (key: string, patch: Partial<RowState>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -132,22 +198,40 @@ export function ImportReportModal({
   const removeRow = (key: string) =>
     setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
 
+  const resolveLinkPreview = async (key: string, url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      updateRow(key, { previewTitle: undefined });
+      return;
+    }
+    try {
+      const { title } = await api.resolveTaskTitle(trimmed);
+      updateRow(key, { previewTitle: title });
+    } catch {
+      updateRow(key, { previewTitle: null });
+    }
+  };
+
   const touchedRows = rows.filter(isRowTouched);
-  const incompleteRows = touchedRows.filter((r) => !isRowValid(r));
-  const validRows = touchedRows.filter(isRowValid);
+  const incompleteRows = touchedRows.filter((r) => !isRowValid(r, config?.taskUrlPrefix));
+  const validRows = touchedRows.filter((r) => isRowValid(r, config?.taskUrlPrefix));
   const totalHours = validRows.reduce((s, r) => s + parseFloat(r.hours), 0);
 
   const selectedMember = members.find((m) => m.id === memberId);
-  const threshold = selectedMember ? HOUR_THRESHOLD[selectedMember.role] : undefined;
+  const baseThreshold = selectedMember ? HOUR_THRESHOLD[selectedMember.role] : undefined;
+  // Leave hours count toward the day, so a partial leave lowers how much
+  // work is still expected (e.g. full-time 7h base - 4h leave = 3h).
+  const threshold =
+    baseThreshold != null ? Math.max(0, baseThreshold - (leaveHours ?? 0)) : undefined;
   const underThreshold = threshold != null && totalHours < threshold;
+  const fullDayOff = leaveHours === 8;
 
-  const canSubmit = useMemo(
-    () =>
-      !!memberId &&
-      !saving &&
-      (holidayMode || (validRows.length > 0 && incompleteRows.length === 0)),
-    [memberId, saving, holidayMode, validRows.length, incompleteRows.length],
-  );
+  const canSubmit = useMemo(() => {
+    if (!memberId || saving) return false;
+    if (fullDayOff) return true;
+    if (incompleteRows.length > 0) return false;
+    return validRows.length > 0 || leaveHours != null;
+  }, [memberId, saving, fullDayOff, incompleteRows.length, validRows.length, leaveHours]);
 
   const submit = async () => {
     setError('');
@@ -156,36 +240,38 @@ export function ImportReportModal({
       setError('Select a member.');
       return;
     }
-    if (holidayMode) {
-      setSaving(true);
-      try {
-        await api.setAttendance(memberId, date, 'holiday');
-        const who = members.find((m) => m.id === memberId)?.name ?? 'Member';
-        setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
-        onImported();
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setSaving(false);
+    if (!fullDayOff) {
+      if (incompleteRows.length > 0) {
+        setError('Complete or remove the highlighted rows first.');
+        return;
       }
-      return;
+      if (validRows.length === 0 && leaveHours == null) {
+        setError('Add at least one task.');
+        return;
+      }
     }
-    if (incompleteRows.length > 0) {
-      setError('Complete or remove the highlighted rows first.');
-      return;
-    }
-    if (validRows.length === 0) {
-      setError('Add at least one task.');
-      return;
-    }
-    const text = validRows.map(rowToLine).join('\n');
     setSaving(true);
     try {
-      const report = await api.importReport({ memberId, date, text });
-      const total = report.entries.reduce((s, e) => s + e.hours, 0);
-      setOk(
-        `Saved ${report.entries.length} tasks (${total}h) for ${report.member.name} on ${formatDate(report.date)}.`,
-      );
+      if (leaveHours != null) {
+        await api.setAttendance(memberId, date, 'holiday', leaveHours);
+      } else if (hadExistingLeave) {
+        await api.setAttendance(memberId, date, 'none');
+      }
+      const who = members.find((m) => m.id === memberId)?.name ?? 'Member';
+      if (fullDayOff) {
+        setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
+      } else if (validRows.length > 0) {
+        const text = validRows.map(rowToLine).join('\n');
+        const report = await api.importReport({ memberId, date, text });
+        const total = report.entries.reduce((s, e) => s + e.hours, 0);
+        setOk(
+          `Saved ${report.entries.length} tasks (${total}h)` +
+            (leaveHours ? ` + ${leaveHours}h leave` : '') +
+            ` for ${report.member.name} on ${formatDate(report.date)}.`,
+        );
+      } else {
+        setOk(`Saved ${leaveHours}h leave for ${who} on ${formatDate(date)}.`);
+      }
       onImported();
     } catch (e: any) {
       setError(e.message);
@@ -227,119 +313,183 @@ export function ImportReportModal({
         </div>
 
         {loadingExisting ? (
-          <div className="empty">
-            <Spinner sm /> Loading current data…
-          </div>
+          <Loading />
         ) : (
-          <>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={holidayMode}
-                onChange={(e) => setHolidayMode(e.target.checked)}
-              />
-              <span>Holiday (no work this day)</span>
-            </label>
+          <div
+            style={{
+              opacity: memberId ? 1 : 0.45,
+              pointerEvents: memberId ? 'auto' : 'none',
+              transition: 'opacity 150ms',
+            }}
+          >
+            <div className="field-row" style={{ alignItems: 'center', marginBottom: 14 }}>
+              <label className="checkbox-row" style={{ margin: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={leaveHours != null}
+                  onChange={(e) => setLeaveHours(e.target.checked ? 8 : null)}
+                />
+                <span>Leave/Holiday</span>
+              </label>
+              <div
+                style={{ width: 160, visibility: leaveHours != null ? 'visible' : 'hidden' }}
+              >
+                <Select
+                  value={String(leaveHours ?? 8)}
+                  onChange={(v) => setLeaveHours(Number(v))}
+                  options={LEAVE_HOUR_OPTIONS.map((h) => ({
+                    value: String(h),
+                    label: `${h}h${h === 8 ? ' (full day)' : ''}`,
+                  }))}
+                />
+              </div>
+            </div>
 
-            {!holidayMode && (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Link / Task</th>
-                      <th className="num">Hours</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => {
-                      const invalid = isRowTouched(r) && !isRowValid(r);
-                      return (
-                        <tr key={r.key} className={invalid ? 'invalid-row' : ''}>
-                          <td>
-                            <select
-                              value={r.type}
-                              onChange={(e) =>
-                                updateRow(r.key, {
-                                  type: e.target.value as EntryType,
-                                  link: '',
-                                  otherTask: '',
-                                })
-                              }
-                            >
-                              <option value="teamwork">Teamwork</option>
-                              <option value="other">Other task</option>
-                            </select>
-                          </td>
-                          <td>
-                            {r.type === 'teamwork' ? (
-                              <input
-                                value={r.link}
-                                onChange={(e) => updateRow(r.key, { link: e.target.value })}
-                                placeholder={
-                                  config
-                                    ? `${config.taskUrlPrefix}/app/tasks/101`
-                                    : 'Teamwork task link'
+            {
+              <div
+                style={{
+                  opacity: fullDayOff ? 0.45 : 1,
+                  pointerEvents: fullDayOff ? 'none' : 'auto',
+                  transition: 'opacity 150ms',
+                }}
+              >
+                <div className="table-frame">
+                  <table className="report-table">
+                    <colgroup>
+                      <col style={{ width: 140 }} />
+                      <col />
+                      <col style={{ width: 200 }} />
+                      <col style={{ width: 96 }} />
+                      <col style={{ width: 44 }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Link / Task</th>
+                        <th>Note</th>
+                        <th>Hours</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => {
+                        const invalid =
+                          isRowTouched(r) && !isRowValid(r, config?.taskUrlPrefix);
+                        return (
+                          <tr key={r.key} className={invalid ? 'invalid-row' : ''}>
+                            <td>
+                              <Select
+                                value={r.type}
+                                onChange={(v) =>
+                                  updateRow(r.key, {
+                                    type: v as EntryType,
+                                    link: '',
+                                    otherTask: '',
+                                  })
                                 }
+                                options={[
+                                  { value: 'teamwork', label: 'Teamwork' },
+                                  { value: 'other', label: 'Other task' },
+                                ]}
+                              />
+                            </td>
+                            <td>
+                              {r.type === 'teamwork' ? (
+                                r.previewTitle ? (
+                                  <div className="link-preview">
+                                    <span className="link-preview-title">
+                                      {r.previewTitle}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="row-remove-btn"
+                                      onClick={() =>
+                                        updateRow(r.key, { link: '', previewTitle: undefined })
+                                      }
+                                      title="Clear"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <input
+                                    value={r.link}
+                                    onChange={(e) =>
+                                      updateRow(r.key, {
+                                        link: e.target.value,
+                                        previewTitle: undefined,
+                                      })
+                                    }
+                                    onBlur={(e) => resolveLinkPreview(r.key, e.target.value)}
+                                    placeholder={
+                                      config
+                                        ? `${config.taskUrlPrefix}/app/tasks/101`
+                                        : 'Teamwork task link'
+                                    }
+                                    style={{ width: '100%' }}
+                                  />
+                                )
+                              ) : (
+                                <Select
+                                  value={r.otherTask}
+                                  onChange={(v) => updateRow(r.key, { otherTask: v })}
+                                  placeholder="Select task"
+                                  options={(config?.noUrlAllowedTasks ?? [])
+                                    .concat(
+                                      r.otherTask &&
+                                        !config?.noUrlAllowedTasks.includes(r.otherTask)
+                                        ? [r.otherTask]
+                                        : [],
+                                    )
+                                    .map((t) => ({ value: t, label: t }))}
+                                />
+                              )}
+                            </td>
+                            <td>
+                              <input
+                                value={r.note}
+                                onChange={(e) => updateRow(r.key, { note: e.target.value })}
+                                placeholder="Optional note"
                                 style={{ width: '100%' }}
                               />
-                            ) : (
-                              <select
-                                value={r.otherTask}
-                                onChange={(e) =>
-                                  updateRow(r.key, { otherTask: e.target.value })
-                                }
-                                style={{ width: '100%' }}
+                            </td>
+                            <td className="num">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                value={r.hours}
+                                onChange={(e) => updateRow(r.key, { hours: e.target.value })}
+                                style={{ width: '100%', textAlign: 'right' }}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                className="btn ghost row-remove-btn"
+                                onClick={() => removeRow(r.key)}
+                                disabled={rows.length === 1}
+                                title="Remove row"
                               >
-                                <option value="">Select task</option>
-                                {config?.noUrlAllowedTasks.map((t) => (
-                                  <option key={t} value={t}>
-                                    {t}
-                                  </option>
-                                ))}
-                                {r.otherTask &&
-                                  !config?.noUrlAllowedTasks.includes(r.otherTask) && (
-                                    <option value={r.otherTask}>{r.otherTask}</option>
-                                  )}
-                              </select>
-                            )}
-                          </td>
-                          <td className="num">
-                            <input
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              value={r.hours}
-                              onChange={(e) => updateRow(r.key, { hours: e.target.value })}
-                              style={{ width: 72 }}
-                            />
-                          </td>
-                          <td>
-                            <button
-                              className="btn ghost sm"
-                              onClick={() => removeRow(r.key)}
-                              disabled={rows.length === 1}
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                ✕
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
                 <button
                   className="btn ghost sm"
                   onClick={() => setRows((rs) => [...rs, makeRow()])}
-                  style={{ marginTop: 8 }}
+                  style={{ marginTop: 10 }}
                 >
                   + Add task
                 </button>
 
                 <div
                   className="field-row"
-                  style={{ marginTop: 12, alignItems: 'center', justifyContent: 'space-between' }}
+                  style={{ marginTop: 14, alignItems: 'center', justifyContent: 'space-between' }}
                 >
                   <strong>Total: {totalHours}h</strong>
                   {underThreshold && selectedMember && (
@@ -349,22 +499,22 @@ export function ImportReportModal({
                     </span>
                   )}
                 </div>
-              </>
-            )}
-          </>
+              </div>
+            }
+          </div>
         )}
 
         <button
           className="btn block"
           onClick={submit}
           disabled={!canSubmit}
-          style={{ marginTop: 12 }}
+          style={{ marginTop: 16 }}
         >
           {saving ? (
             <span className="btn-spin">
               <Spinner sm /> Saving…
             </span>
-          ) : holidayMode ? (
+          ) : fullDayOff ? (
             'Mark holiday'
           ) : (
             'Save report'

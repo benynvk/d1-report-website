@@ -47,6 +47,7 @@ export interface Attendance {
   id: string;
   date: string;
   status: AttendanceStatus;
+  hours: number | null;
   member: Member;
 }
 
@@ -62,6 +63,7 @@ export interface MemberDayStat {
   avatarUrl: string | null;
   role: MemberRole;
   status: AttendanceStatus | null;
+  holidayHours: number | null;
   reported: boolean;
   totalHours: number;
   taskCount: number;

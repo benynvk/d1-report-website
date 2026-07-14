@@ -316,57 +316,71 @@ function DayPanel({
           <div className="empty">No members.</div>
         ) : (
           <div className="yday-list">
-            {data.members.map((m) => (
-              <div
-                className="yday-row clickable"
-                key={m.memberId}
-                onClick={() =>
-                  onSelect({
-                    id: m.memberId,
-                    name: m.memberName,
-                    avatarUrl: m.avatarUrl,
-                  })
-                }
-              >
-                <span className="yday-name member-cell">
-                  <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
-                  <span>{m.memberName}</span>
-                </span>
-                <div className="yday-body">
-                  {m.status === 'holiday' ? (
-                    <span className="badge holiday">Holiday</span>
-                  ) : !m.reported ? (
-                    m.role === 'support' ? (
-                      <span className="badge">Support</span>
+            {data.members.map((m) => {
+              const fullyOff =
+                m.status === 'holiday' &&
+                (m.holidayHours == null || m.holidayHours >= 8);
+              return (
+                <div
+                  className="yday-row clickable"
+                  key={m.memberId}
+                  onClick={() =>
+                    onSelect({
+                      id: m.memberId,
+                      name: m.memberName,
+                      avatarUrl: m.avatarUrl,
+                    })
+                  }
+                >
+                  <span className="yday-name member-cell">
+                    <Avatar name={m.memberName} src={m.avatarUrl} size={24} />
+                    <span>{m.memberName}</span>
+                  </span>
+                  <div className="yday-body">
+                    {fullyOff ? (
+                      <span className="badge holiday">Holiday</span>
                     ) : (
-                      <span className="badge pending">Not reported</span>
-                    )
-                  ) : (
-                    <ul className="entries">
-                      {m.entries.map((e, i) => (
-                        <li key={i}>
-                          <span className="task-name">
-                            {e.href ? (
-                              <a
-                                href={e.href}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(ev) => ev.stopPropagation()}
-                              >
-                                {taskLabel(e)}
-                              </a>
-                            ) : (
-                              taskLabel(e)
-                            )}
+                      <>
+                        {m.status === 'holiday' && (
+                          <span className="badge holiday" style={{ marginRight: 6 }}>
+                            Leave {m.holidayHours}h
                           </span>
-                          <span className="hours-pill">{e.hours}h</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                        )}
+                        {!m.reported ? (
+                          m.role === 'support' ? (
+                            <span className="badge">Support</span>
+                          ) : (
+                            <span className="badge pending">Not reported</span>
+                          )
+                        ) : (
+                          <ul className="entries">
+                            {m.entries.map((e, i) => (
+                              <li key={i}>
+                                <span className="task-name">
+                                  {e.href ? (
+                                    <a
+                                      href={e.href}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      onClick={(ev) => ev.stopPropagation()}
+                                    >
+                                      {taskLabel(e)}
+                                    </a>
+                                  ) : (
+                                    taskLabel(e)
+                                  )}
+                                </span>
+                                <span className="hours-pill">{e.hours}h</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
