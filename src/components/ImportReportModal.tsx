@@ -25,6 +25,8 @@ interface RowState {
   /** Resolved Teamwork task title, previewed in place of the raw link once
    * known. undefined = not looked up yet; null = looked up, not found. */
   previewTitle?: string | null;
+  /** True while resolving the title after the link input blurs. */
+  previewLoading?: boolean;
 }
 
 function makeRow(): RowState {
@@ -36,6 +38,7 @@ function makeRow(): RowState {
     note: '',
     hours: '',
     previewTitle: undefined,
+    previewLoading: false,
   };
 }
 
@@ -225,11 +228,12 @@ export function ImportReportModal({
       updateRow(key, { previewTitle: undefined });
       return;
     }
+    updateRow(key, { previewLoading: true });
     try {
       const { title } = await api.resolveTaskTitle(trimmed);
-      updateRow(key, { previewTitle: title });
+      updateRow(key, { previewTitle: title, previewLoading: false });
     } catch {
-      updateRow(key, { previewTitle: null });
+      updateRow(key, { previewTitle: null, previewLoading: false });
     }
   };
 
@@ -429,7 +433,7 @@ export function ImportReportModal({
                                     </span>
                                     <button
                                       type="button"
-                                      className="row-remove-btn"
+                                      className="btn ghost row-remove-btn"
                                       onClick={() =>
                                         updateRow(r.key, { link: '', previewTitle: undefined })
                                       }
@@ -439,22 +443,36 @@ export function ImportReportModal({
                                     </button>
                                   </div>
                                 ) : (
-                                  <input
-                                    value={r.link}
-                                    onChange={(e) =>
-                                      updateRow(r.key, {
-                                        link: e.target.value,
-                                        previewTitle: undefined,
-                                      })
-                                    }
-                                    onBlur={(e) => resolveLinkPreview(r.key, e.target.value)}
-                                    placeholder={
-                                      config
-                                        ? `${config.taskUrlPrefix}/app/tasks/101`
-                                        : 'Teamwork task link'
-                                    }
-                                    style={{ width: '100%' }}
-                                  />
+                                  <div style={{ position: 'relative' }}>
+                                    <input
+                                      value={r.link}
+                                      onChange={(e) =>
+                                        updateRow(r.key, {
+                                          link: e.target.value,
+                                          previewTitle: undefined,
+                                        })
+                                      }
+                                      onBlur={(e) => resolveLinkPreview(r.key, e.target.value)}
+                                      placeholder={
+                                        config
+                                          ? `${config.taskUrlPrefix}/app/tasks/101`
+                                          : 'Teamwork task link'
+                                      }
+                                      style={{ width: '100%', paddingRight: 32 }}
+                                    />
+                                    {r.previewLoading && (
+                                      <span
+                                        style={{
+                                          position: 'absolute',
+                                          right: 11,
+                                          top: '50%',
+                                          transform: 'translateY(-50%)',
+                                        }}
+                                      >
+                                        <Spinner sm />
+                                      </span>
+                                    )}
+                                  </div>
                                 )
                               ) : (
                                 <Select
