@@ -282,7 +282,7 @@ export default function MembersPage() {
                 <th className="c">Teamwork email</th>
                 <th className="c">WIP name</th>
                 <th className="c">Chat ID</th>
-                <th className="c">Auto WIP</th>
+                <th className="c" style={{ whiteSpace: 'nowrap' }}>Auto WIP</th>
                 <th className="c">Role</th>
                 <th className="c"></th>
               </tr>
