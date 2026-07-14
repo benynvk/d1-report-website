@@ -212,6 +212,12 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.link-preview-title:hover {
+  text-decoration: underline;
 }
 
 /* Theme toggle — icon only */

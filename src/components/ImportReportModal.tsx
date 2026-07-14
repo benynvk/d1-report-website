@@ -428,9 +428,15 @@ export function ImportReportModal({
                               {r.type === 'teamwork' ? (
                                 r.previewTitle ? (
                                   <div className="link-preview">
-                                    <span className="link-preview-title">
+                                    <a
+                                      href={r.link}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="link-preview-title"
+                                      title={r.link}
+                                    >
                                       {r.previewTitle}
-                                    </span>
+                                    </a>
                                     <button
                                       type="button"
                                       className="btn ghost row-remove-btn"
