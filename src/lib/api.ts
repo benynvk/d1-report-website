@@ -45,6 +45,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+// The member list rarely changes and is fetched from several pages/modals —
+// cache it in memory for the session, and actively drop the cache whenever
+// a member is created/updated/deleted so the next read is always fresh.
+let membersCache: Member[] | null = null;
+let membersInFlight: Promise<Member[]> | null = null;
+
+function invalidateMembersCache() {
+  membersCache = null;
+  membersInFlight = null;
+}
+
+function fetchMembers(): Promise<Member[]> {
+  if (membersCache) return Promise.resolve(membersCache);
+  if (!membersInFlight) {
+    membersInFlight = request<Member[]>('/members')
+      .then((members) => {
+        membersCache = members;
+        return members;
+      })
+      .finally(() => {
+        membersInFlight = null;
+      });
+  }
+  return membersInFlight;
+}
+
 const qs = (params: Record<string, string | undefined>) => {
   const s = new URLSearchParams(
     Object.entries(params).filter(([, v]) => !!v) as [string, string][],
@@ -57,7 +83,7 @@ export const api = {
   activeProject: () => request<Project>('/projects/active'),
 
   // Members
-  listMembers: () => request<Member[]>('/members'),
+  listMembers: () => fetchMembers(),
   createMember: (data: {
     name: string;
     email: string;
@@ -67,14 +93,16 @@ export const api = {
     teamworkEmail?: string;
     autoWip?: boolean;
   }) =>
-    request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }),
+    request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }).finally(
+      invalidateMembersCache,
+    ),
   updateMember: (id: string, data: Partial<Member>) =>
     request<Member>(`/members/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-    }),
+    }).finally(invalidateMembersCache),
   deleteMember: (id: string) =>
-    request<void>(`/members/${id}`, { method: 'DELETE' }),
+    request<void>(`/members/${id}`, { method: 'DELETE' }).finally(invalidateMembersCache),
 
   // Task types (no-URL allowlist)
   listTaskTypes: () => request<TaskType[]>('/task-types'),

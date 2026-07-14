@@ -95,6 +95,15 @@ const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = {
 
 const LEAVE_HOUR_OPTIONS = [2, 4, 8] as const;
 
+const LAST_MEMBER_KEY = 'd1-report:lastMemberId';
+
+/** Reads the last-selected member so the modal opens pre-filled for the
+ * common case of the same person logging reports each time. */
+function getLastMemberId(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem(LAST_MEMBER_KEY) ?? '';
+}
+
 /** Popup: build a structured task list for a member/day, prefilled with
  * whatever is already saved so re-saving intentionally overwrites it. */
 export function ImportReportModal({
@@ -105,8 +114,9 @@ export function ImportReportModal({
   onImported: () => void;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [config, setConfig] = useState<ReportConfig | null>(null);
-  const [memberId, setMemberId] = useState('');
+  const [memberId, setMemberId] = useState<string>(getLastMemberId);
   const [date, setDate] = useState(today());
   const [rows, setRows] = useState<RowState[]>([makeRow()]);
   const [leaveHours, setLeaveHours] = useState<number | null>(null);
@@ -116,8 +126,19 @@ export function ImportReportModal({
   const [ok, setOk] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const selectMember = (id: string) => {
+    setMemberId(id);
+    if (typeof window === 'undefined') return;
+    if (id) localStorage.setItem(LAST_MEMBER_KEY, id);
+    else localStorage.removeItem(LAST_MEMBER_KEY);
+  };
+
   useEffect(() => {
-    api.listMembers().then(setMembers).catch((e) => setError(e.message));
+    api
+      .listMembers()
+      .then(setMembers)
+      .catch((e) => setError(e.message))
+      .finally(() => setMembersLoading(false));
     api.reportConfig().then(setConfig).catch(() => {});
   }, []);
 
@@ -293,16 +314,22 @@ export function ImportReportModal({
         <div className="field-row">
           <div className="field" style={{ flex: 1, minWidth: 0 }}>
             <label>Member</label>
-            <Select
-              value={memberId}
-              onChange={setMemberId}
-              placeholder="Select member"
-              options={members.map((m) => ({
-                value: m.id,
-                label: `${m.name} (${m.email})`,
-                icon: <Avatar name={m.name} src={m.avatarUrl} size={20} />,
-              }))}
-            />
+            {membersLoading ? (
+              <div className="select-btn" style={{ cursor: 'default', gap: 8 }}>
+                <Spinner sm /> Loading members…
+              </div>
+            ) : (
+              <Select
+                value={memberId}
+                onChange={selectMember}
+                placeholder="Select member"
+                options={members.map((m) => ({
+                  value: m.id,
+                  label: `${m.name} (${m.email})`,
+                  icon: <Avatar name={m.name} src={m.avatarUrl} size={20} />,
+                }))}
+              />
+            )}
           </div>
           <div className="field" style={{ flexShrink: 0 }}>
             <label>Date</label>
