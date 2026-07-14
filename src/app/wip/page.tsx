@@ -123,14 +123,14 @@ function WipPageInner() {
     try {
       const result = await api.checkWipReminder();
       if (result.missingToday.length === 0 && result.missingPrevEvening.length === 0) {
-        setOk(`No one missing WIP for ${result.date} — nothing sent.`);
+        setOk(`No one missing WIP for ${result.date} - nothing sent.`);
       } else {
         const parts: string[] = [];
         if (result.missingPrevEvening.length)
           parts.push(`evening (prev day): ${result.missingPrevEvening.join(', ')}`);
         if (result.missingToday.length)
           parts.push(`morning: ${result.missingToday.join(', ')}`);
-        setOk(`Reminder sent — ${parts.join(' · ')}`);
+        setOk(`Reminder sent - ${parts.join(' · ')}`);
       }
     } catch (e: any) {
       setError(e.message);
@@ -188,7 +188,7 @@ function WipPageInner() {
           className="panel-head"
           style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
         >
-          <span>WIP — {formatDate(date)}</span>
+          <span>WIP - {formatDate(date)}</span>
           <DateField value={date} onChange={setDate} />
           <button
             className="btn ghost sm"
@@ -221,7 +221,7 @@ function WipPageInner() {
           </div>
         ) : mappedRows.length === 0 ? (
           <div className="empty">
-            No mapped members in this tab — set WIP name in Members.
+            No mapped members in this tab - set WIP name in Members.
           </div>
         ) : (
           <table style={{ tableLayout: 'fixed' }}>

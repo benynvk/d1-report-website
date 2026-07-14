@@ -206,7 +206,7 @@ export default function MembersPage() {
       setSyncMessage(
         updated > 0
           ? `Synced ${updated} member(s) by email.`
-          : 'No matches — no member emails matched a Chat member email.',
+          : 'No matches - no member emails matched a Chat member email.',
       );
     } catch (e: any) {
       setError(e.message);

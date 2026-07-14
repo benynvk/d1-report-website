@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
@@ -32,15 +33,33 @@ function isoDaysAgo(days: number): string {
     .slice(0, 10);
 }
 
+/** First day of the current (local) month, as 'YYYY-MM-DD'. */
+function isoMonthStart(): string {
+  return isoDaysAgo(0).slice(0, 8) + '01';
+}
+
 const PRESETS = [
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
+  { key: 'mtd', label: 'This month' },
+  { key: '7', label: '7 days' },
+  { key: '30', label: '30 days' },
+  { key: '90', label: '90 days' },
 ];
 
+/** Range start for a preset key ('mtd' or a day count). */
+function fromForPreset(key: string): string {
+  return key === 'mtd' ? isoMonthStart() : isoDaysAgo(Number(key));
+}
+
+/** Defaults to month-to-date, unless we're less than a week into the month
+ * (too short a range to be useful) — then last-7-days instead. */
+function defaultPresetKey(): string {
+  const dayOfMonth = Number(isoDaysAgo(0).slice(8, 10));
+  return dayOfMonth < 7 ? '7' : 'mtd';
+}
+
 export default function HomePage() {
-  const [preset, setPreset] = useState(30);
-  const [from, setFrom] = useState(isoDaysAgo(30));
+  const [preset, setPreset] = useState<string>(defaultPresetKey);
+  const [from, setFrom] = useState<string>(() => fromForPreset(defaultPresetKey()));
   const [to, setTo] = useState(isoDaysAgo(0));
   const [summary, setSummary] = useState<SummaryResult | null>(null);
   const [today, setToday] = useState<DailyOverview | null>(null);
@@ -54,9 +73,9 @@ export default function HomePage() {
   const tISO = useMemo(() => isoDaysAgo(0), []);
   const yISO = useMemo(() => isoDaysAgo(1), []);
 
-  const applyPreset = (days: number) => {
-    setPreset(days);
-    setFrom(isoDaysAgo(days));
+  const applyPreset = (key: string) => {
+    setPreset(key);
+    setFrom(fromForPreset(key));
     setTo(isoDaysAgo(0));
   };
 
@@ -122,9 +141,9 @@ export default function HomePage() {
         <div className="preset-group">
           {PRESETS.map((p) => (
             <button
-              key={p.days}
-              className={`preset-btn${preset === p.days ? ' active' : ''}`}
-              onClick={() => applyPreset(p.days)}
+              key={p.key}
+              className={`preset-btn${preset === p.key ? ' active' : ''}`}
+              onClick={() => applyPreset(p.key)}
             >
               {p.label}
             </button>
@@ -134,7 +153,7 @@ export default function HomePage() {
           <DateField
             value={from}
             onChange={(v) => {
-              setPreset(0);
+              setPreset('');
               setFrom(v);
             }}
           />
@@ -142,7 +161,7 @@ export default function HomePage() {
           <DateField
             value={to}
             onChange={(v) => {
-              setPreset(0);
+              setPreset('');
               setTo(v);
             }}
           />
@@ -287,6 +306,41 @@ export default function HomePage() {
           onClose={() => setSelected(null)}
         />
       )}
+
+      <Link
+        href="/reports"
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 20,
+          width: 36,
+          height: 36,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '50%',
+          background: 'var(--primary)',
+          color: '#fff',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
+          zIndex: 50,
+        }}
+        title="Reports"
+        aria-label="Reports"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.6a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.4a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.4a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.56 1.04h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" />
+        </svg>
+      </Link>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { ConfirmProvider } from '@/components/Confirm';
 import { Nav } from '@/components/Nav';
 
 export const metadata: Metadata = {
-  title: 'D1 Training — Workload',
+  title: 'D1 Training - Workload',
   description: 'Daily workload reports from Google Chat',
 };
 
