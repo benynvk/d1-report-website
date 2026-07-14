@@ -349,6 +349,89 @@ a:hover {
   padding: 0;
 }
 
+/* Report-day calendar popover (ReportDateField) */
+.cal-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 260px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.cal-nav button {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.cal-nav button:hover {
+  background: var(--bg);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cal-day:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.cal-day:disabled {
+  color: var(--muted);
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.cal-day.green {
+  background: color-mix(in srgb, var(--green) 30%, transparent);
+}
+.cal-day.yellow {
+  background: color-mix(in srgb, var(--amber) 30%, transparent);
+}
+.cal-day.red {
+  background: color-mix(in srgb, var(--red) 22%, transparent);
+}
+.cal-day.selected {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+}
+.cal-day.today {
+  font-weight: 700;
+}
+
 /* Modal / confirm dialog */
 .modal-overlay {
   position: fixed;

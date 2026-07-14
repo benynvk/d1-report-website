@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { Select } from './Select';
 import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
-import { DateField } from './DateField';
+import { ReportDateField } from './ReportDateField';
 import { formatDate } from '@/lib/format';
 import type { Member, MemberRole, ReportConfig } from '@/lib/types';
 
@@ -171,7 +171,7 @@ export function ImportReportModal({
     setLoadingExisting(true);
     Promise.all([
       api.listReports({ date, memberId }),
-      api.listAttendance(date),
+      api.listAttendance({ date }),
     ])
       .then(([reports, attendance]) => {
         if (cancelled) return;
@@ -344,7 +344,12 @@ export function ImportReportModal({
           <div className="field" style={{ flexShrink: 0 }}>
             <label>Date</label>
             <div>
-              <DateField value={date} onChange={setDate} />
+              <ReportDateField
+                value={date}
+                onChange={setDate}
+                memberId={memberId}
+                baseThreshold={baseThreshold}
+              />
             </div>
           </div>
         </div>

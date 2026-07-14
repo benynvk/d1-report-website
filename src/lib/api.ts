@@ -139,8 +139,8 @@ export const api = {
     request<void>(`/reports/${id}`, { method: 'DELETE' }),
 
   // Attendance
-  listAttendance: (date: string) =>
-    request<Attendance[]>(`/attendance${qs({ date })}`),
+  listAttendance: (params: { date?: string; from?: string; to?: string; memberId?: string }) =>
+    request<Attendance[]>(`/attendance${qs(params)}`),
   setAttendance: (
     memberId: string,
     date: string,
