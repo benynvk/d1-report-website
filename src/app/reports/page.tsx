@@ -29,8 +29,19 @@ export default function ReportsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ memberId: string; date: string } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
+
+  const openAdd = () => {
+    setEditTarget(null);
+    setShowImport(true);
+  };
+
+  const openEdit = (r: DailyReport) => {
+    setEditTarget({ memberId: r.member.id, date: r.date });
+    setShowImport(true);
+  };
 
   useEffect(() => {
     api.listMembers().then(setMembers).catch(() => {});
@@ -114,7 +125,7 @@ export default function ReportsPage() {
               }))}
             />
           </div>
-          <button className="btn" onClick={() => setShowImport(true)}>
+          <button className="btn" onClick={openAdd}>
             + Add
           </button>
         </div>
@@ -133,9 +144,9 @@ export default function ReportsPage() {
             <thead>
               <tr>
                 <th className="c">Date</th>
-                <th>Member</th>
+                <th className="c">Member</th>
                 <th className="c">Hours</th>
-                <th>Tasks</th>
+                <th className="c">Tasks</th>
                 <th className="c">Source</th>
                 <th className="c"></th>
               </tr>
@@ -151,7 +162,7 @@ export default function ReportsPage() {
                     </div>
                   </td>
                   <td className="c mid">{round(sum(r))}h</td>
-                  <td>
+                  <td className="mid">
                     <ul className="entries">
                       {r.entries.map((e) => (
                         <li key={e.id}>
@@ -173,9 +184,14 @@ export default function ReportsPage() {
                     <span className="badge gray">{r.source}</span>
                   </td>
                   <td className="c mid">
-                    <button className="btn danger sm" onClick={() => remove(r.id)}>
-                      Delete
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                      <button className="btn ghost sm" onClick={() => openEdit(r)}>
+                        Edit
+                      </button>
+                      <button className="btn danger sm" onClick={() => remove(r.id)}>
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -191,6 +207,8 @@ export default function ReportsPage() {
 
       {showImport && (
         <ImportReportModal
+          initialMemberId={editTarget?.memberId}
+          initialDate={editTarget?.date}
           onClose={() => setShowImport(false)}
           onImported={load}
         />

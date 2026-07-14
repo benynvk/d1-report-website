@@ -112,15 +112,21 @@ function getLastMemberId(): string {
 export function ImportReportModal({
   onClose,
   onImported,
+  initialMemberId,
+  initialDate,
 }: {
   onClose: () => void;
   onImported: () => void;
+  /** Pre-fills for editing a specific member/day's report (e.g. from the
+   * Reports list's Edit button) instead of the last-selected member/today. */
+  initialMemberId?: string;
+  initialDate?: string;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
   const [config, setConfig] = useState<ReportConfig | null>(null);
-  const [memberId, setMemberId] = useState<string>(getLastMemberId);
-  const [date, setDate] = useState(today());
+  const [memberId, setMemberId] = useState<string>(() => initialMemberId || getLastMemberId());
+  const [date, setDate] = useState(initialDate || today());
   const [rows, setRows] = useState<RowState[]>([makeRow()]);
   const [leaveHours, setLeaveHours] = useState<number | null>(null);
   const [hadExistingLeave, setHadExistingLeave] = useState(false);
