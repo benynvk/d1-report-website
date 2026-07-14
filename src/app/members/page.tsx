@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useConfirm } from '@/components/Confirm';
 import { Loading, Spinner } from '@/components/Spinner';
+import { Select } from '@/components/Select';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
 import { resizeImage } from '@/lib/image';
@@ -344,17 +345,12 @@ export default function MembersPage() {
                       style={{ width: 16, height: 16, cursor: 'pointer' }}
                     />
                   </td>
-                  <td className="c mid">
-                    <select
+                  <td className="mid" style={{ minWidth: 140 }}>
+                    <Select
                       value={m.role}
-                      onChange={(e) => saveRole(m, e.target.value as MemberRole)}
-                    >
-                      {ROLE_OPTIONS.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_LABELS[r]}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => saveRole(m, v as MemberRole)}
+                      options={ROLE_OPTIONS.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                    />
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <button className="btn danger sm" onClick={() => remove(m)}>
@@ -455,17 +451,11 @@ export default function MembersPage() {
             </div>
             <div className="field">
               <label>Role</label>
-              <select
+              <Select
                 value={role}
-                onChange={(e) => setRole(e.target.value as MemberRole)}
-                style={{ width: '100%' }}
-              >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setRole(v as MemberRole)}
+                options={ROLE_OPTIONS.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+              />
               <div className="hint">Support members skip daily reminders.</div>
             </div>
             <label className="checkbox-row">

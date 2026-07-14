@@ -96,7 +96,9 @@ export default function TaskTypesPage() {
         <div className="col">
           <div className="panel">
             <div className="panel-head">{types.length} type(s)</div>
-            {types.length === 0 ? (
+            {loading ? (
+              <Loading />
+            ) : types.length === 0 ? (
               <div className="empty">No allowed no-link task types.</div>
             ) : (
               <table>
@@ -109,8 +111,8 @@ export default function TaskTypesPage() {
                 <tbody>
                   {types.map((t) => (
                     <tr key={t.id}>
-                      <td style={{ fontWeight: 600 }}>{t.label}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ fontWeight: 600, verticalAlign: 'middle' }}>{t.label}</td>
+                      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                         <button
                           className="btn danger sm"
                           onClick={() => remove(t)}
