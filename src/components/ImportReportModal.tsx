@@ -134,6 +134,7 @@ export function ImportReportModal({
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [saving, setSaving] = useState(false);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
   const selectMember = (id: string) => {
     setMemberId(id);
@@ -304,6 +305,7 @@ export function ImportReportModal({
       } else {
         setOk(`Saved ${leaveHours}h leave for ${who} on ${formatDate(date)}.`);
       }
+      setCalendarRefreshKey((k) => k + 1);
       onImported();
     } catch (e: any) {
       setError(e.message);
@@ -350,6 +352,7 @@ export function ImportReportModal({
                 onChange={setDate}
                 memberId={memberId}
                 baseThreshold={baseThreshold}
+                refreshKey={calendarRefreshKey}
               />
             </div>
           </div>

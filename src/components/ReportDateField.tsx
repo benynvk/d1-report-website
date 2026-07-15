@@ -60,11 +60,14 @@ export function ReportDateField({
   onChange,
   memberId,
   baseThreshold,
+  refreshKey,
 }: {
   value: string;
   onChange: (v: string) => void;
   memberId: string;
   baseThreshold?: number;
+  /** Bump this after a save so the just-written day's color updates without re-opening. */
+  refreshKey?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState<ViewMonth>(() => parseViewMonth(value));
@@ -161,7 +164,7 @@ export function ReportDateField({
     return () => {
       cancelled = true;
     };
-  }, [memberId, viewMonth.year, viewMonth.month]);
+  }, [memberId, viewMonth.year, viewMonth.month, refreshKey]);
 
   const today = todayIso();
   const firstDow = weekdayOf(viewMonth, 1);
