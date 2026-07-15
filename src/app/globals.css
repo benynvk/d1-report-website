@@ -1366,6 +1366,11 @@ label {
   justify-content: center;
   gap: 8px;
   max-width: 100%;
+  /* Padding gives the round avatar breathing room inside .clickable's hover
+     pill (otherwise its 34px-tall circle pokes past the pill's small border
+     radius at the corners); negative margin cancels it out for layout. */
+  padding: 6px 10px;
+  margin: -6px -10px;
 }
 .bar-col-label .name-link,
 .bar-col-label .bar-name {
