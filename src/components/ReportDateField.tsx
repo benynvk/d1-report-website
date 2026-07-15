@@ -127,8 +127,10 @@ export function ReportDateField({
     };
   }, [open]);
 
+  // Fetch as soon as a member is known, not just when the popover opens, so
+  // the calendar is already colored the moment the user clicks the field.
   useEffect(() => {
-    if (!open || !memberId) return;
+    if (!memberId) return;
     let cancelled = false;
     setLoading(true);
     const from = isoDay(viewMonth, 1);
@@ -159,7 +161,7 @@ export function ReportDateField({
     return () => {
       cancelled = true;
     };
-  }, [open, memberId, viewMonth.year, viewMonth.month]);
+  }, [memberId, viewMonth.year, viewMonth.month]);
 
   const today = todayIso();
   const firstDow = weekdayOf(viewMonth, 1);
