@@ -349,12 +349,12 @@ a:hover {
   padding: 0;
 }
 
-/* Report-day calendar popover (ReportDateField) */
+/* Report-day calendar popover (ReportDateField). Rendered via a portal into
+   document.body with inline position:fixed top/left, since the modal it
+   lives in has overflow-y:auto and would otherwise clip it. */
 .cal-popover {
-  position: absolute;
-  z-index: 60;
-  top: calc(100% + 4px);
-  left: 0;
+  position: fixed;
+  z-index: 200;
   width: 260px;
   background: var(--panel);
   border: 1px solid var(--border);

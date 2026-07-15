@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -72,12 +73,22 @@ export function ReportDateField({
     Map<string, { status: string; hours: number | null }>
   >(new Map());
   const [loading, setLoading] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        ref.current &&
+        !ref.current.contains(target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(target)
+      ) {
+        setOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', onDoc);
@@ -93,6 +104,27 @@ export function ReportDateField({
   useEffect(() => {
     if (open) setViewMonth(parseViewMonth(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // The popover is portaled to document.body (its host modal clips
+  // absolutely-positioned overflow), so its position must be computed from
+  // the trigger's viewport coordinates rather than CSS top/left.
+  useEffect(() => {
+    if (!open) return;
+    const POPOVER_WIDTH = 260;
+    const updatePos = () => {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      const left = Math.min(Math.max(8, r.left), window.innerWidth - POPOVER_WIDTH - 8);
+      setPos({ top: r.bottom + 4, left });
+    };
+    updatePos();
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+    return () => {
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -153,8 +185,12 @@ export function ReportDateField({
         <span>{value ? formatDate(value) : 'dd/mm/yyyy'}</span>
       </button>
 
-      {open && (
-        <div className="cal-popover">
+      {open && pos && createPortal(
+        <div
+          className="cal-popover"
+          ref={popoverRef}
+          style={{ top: pos.top, left: pos.left }}
+        >
           <div className="cal-nav">
             <button type="button" onClick={() => setViewMonth((v) => shiftMonth(v, -1))}>
               ‹
@@ -228,7 +264,8 @@ export function ReportDateField({
               Loading…
             </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
