@@ -20,7 +20,7 @@ interface SelectedMember {
 const LOGO =
   'https://d1-mobile-app.s3.us-east-1.amazonaws.com/assets/d1_training_logo.png';
 const DAY = 86400000;
-const round = (n: number) => Math.round(n * 10) / 10;
+const round = (n: number) => Math.round(n * 100) / 100;
 // Line-chart reveal timing: wait for bars to grow, then connect points one at
 // a time (must match the .line-tasks transition-duration in CSS).
 const LINE_BASE_DELAY = 650;

@@ -247,7 +247,7 @@ export function ImportReportModal({
   const incompleteRows = touchedRows.filter((r) => !isRowValid(r, config?.taskUrlPrefix));
   const validRows = touchedRows.filter((r) => isRowValid(r, config?.taskUrlPrefix));
   const totalHours =
-    Math.round(validRows.reduce((s, r) => s + parseFloat(r.hours), 0) * 10) / 10;
+    Math.round(validRows.reduce((s, r) => s + parseFloat(r.hours), 0) * 100) / 100;
 
   const selectedMember = members.find((m) => m.id === memberId);
   const baseThreshold = selectedMember ? HOUR_THRESHOLD[selectedMember.role] : undefined;
