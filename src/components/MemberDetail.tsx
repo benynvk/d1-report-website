@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { formatDate, taskLabel } from '@/lib/format';
+import { formatDate, formatHours, taskLabel } from '@/lib/format';
 import type { DailyReport } from '@/lib/types';
 import { Avatar } from './Avatar';
 import { Loading } from './Spinner';
 
-const round = (n: number) => Math.round(n * 10) / 10;
 const sum = (r: DailyReport) => r.entries.reduce((s, e) => s + e.hours, 0);
 const PAGE = 10;
 
@@ -89,7 +88,7 @@ export function MemberDetail({
               <div className="record-day" key={r.id}>
                 <div className="record-day-head">
                   <span>{formatDate(r.date)}</span>
-                  <span className="hours-pill">{round(sum(r))}h</span>
+                  <span className="hours-pill">{formatHours(sum(r))}</span>
                 </div>
                 <ul className="entries">
                   {r.entries.map((e) => (
@@ -103,7 +102,7 @@ export function MemberDetail({
                           taskLabel(e)
                         )}
                       </span>
-                      <span className="hours-pill">{e.hours}h</span>
+                      <span className="hours-pill">{formatHours(e.hours)}</span>
                     </li>
                   ))}
                 </ul>

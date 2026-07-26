@@ -8,7 +8,8 @@ import { useConfirm } from '@/components/Confirm';
 import { Avatar } from '@/components/Avatar';
 import { DateField } from '@/components/DateField';
 import { ImportReportModal } from '@/components/ImportReportModal';
-import { formatDate, taskLabel } from '@/lib/format';
+import { WipSummaryModal } from '@/components/WipSummaryModal';
+import { formatDate, formatHours, taskLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 function daysAgo(n: number): string {
@@ -16,7 +17,6 @@ function daysAgo(n: number): string {
     .toISOString()
     .slice(0, 10);
 }
-const round = (n: number) => Math.round(n * 10) / 10;
 const sum = (r: DailyReport) => r.entries.reduce((s, e) => s + e.hours, 0);
 
 export default function ReportsPage() {
@@ -29,6 +29,7 @@ export default function ReportsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
+  const [showWip, setShowWip] = useState(false);
   const [editTarget, setEditTarget] = useState<{ memberId: string; date: string } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
@@ -125,6 +126,9 @@ export default function ReportsPage() {
               }))}
             />
           </div>
+          <button className="btn ghost" onClick={() => setShowWip(true)}>
+            WIP summary
+          </button>
           <button className="btn" onClick={openAdd}>
             + Add
           </button>
@@ -161,7 +165,7 @@ export default function ReportsPage() {
                       <span style={{ fontWeight: 600 }}>{r.member.name}</span>
                     </div>
                   </td>
-                  <td className="c mid">{round(sum(r))}h</td>
+                  <td className="c mid">{formatHours(sum(r))}</td>
                   <td className="mid">
                     <ul className="entries">
                       {r.entries.map((e) => (
@@ -175,7 +179,7 @@ export default function ReportsPage() {
                               taskLabel(e)
                             )}
                           </span>
-                          <span className="hours-pill">{e.hours}h</span>
+                          <span className="hours-pill">{formatHours(e.hours)}</span>
                         </li>
                       ))}
                     </ul>
@@ -213,6 +217,8 @@ export default function ReportsPage() {
           onImported={load}
         />
       )}
+
+      {showWip && <WipSummaryModal members={members} onClose={() => setShowWip(false)} />}
     </>
   );
 }

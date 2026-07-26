@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
 import { DateField } from '@/components/DateField';
-import { formatDate, taskLabel } from '@/lib/format';
+import { formatDate, formatHours, taskLabel } from '@/lib/format';
 import type { DailyOverview, SummaryResult } from '@/lib/types';
 
 interface SelectedMember {
@@ -424,7 +424,7 @@ function DayPanel({
                                     taskLabel(e)
                                   )}
                                 </span>
-                                <span className="hours-pill">{e.hours}h</span>
+                                <span className="hours-pill">{formatHours(e.hours)}</span>
                               </li>
                             ))}
                           </ul>

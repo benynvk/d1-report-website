@@ -6,7 +6,7 @@ import { Select } from './Select';
 import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 import { ReportDateField } from './ReportDateField';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatHours } from '@/lib/format';
 import type { Member, MemberRole, ReportConfig } from '@/lib/types';
 
 function today(): string {
@@ -55,9 +55,14 @@ function isValidTeamworkLink(link: string, taskUrlPrefix?: string): boolean {
   return /\/app\/tasks\/\d+/.test(link);
 }
 
+/** Hours are optional: a report filed at the start of the day lists what the
+ * member plans to work on and has no hours yet. When filled in, it still has
+ * to be a positive number. */
 function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
-  const hours = parseFloat(r.hours);
-  if (!r.hours.trim() || Number.isNaN(hours) || hours <= 0) return false;
+  if (r.hours.trim()) {
+    const hours = parseFloat(r.hours);
+    if (Number.isNaN(hours) || hours <= 0) return false;
+  }
   if (r.type === 'teamwork') return isValidTeamworkLink(r.link.trim(), taskUrlPrefix);
   return !!r.otherTask.trim();
 }
@@ -65,11 +70,14 @@ function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
 /** Serializes a valid row into the "<link or task>: <hours>" line the
  * backend's report-text parser already understands. A note (if any) rides
  * along in the task-name text ("<link/task> - <note>") — there's no
- * dedicated note column server-side, so it round-trips through taskName. */
+ * dedicated note column server-side, so it round-trips through taskName.
+ * Blank hours go out as 0: the parser only recognises a task line by its
+ * trailing number, and 0 is how "no hours yet" is stored (the column is
+ * NOT NULL), which reads back as an empty input. */
 function rowToLine(r: RowState): string {
   const base = r.type === 'teamwork' ? r.link.trim() : r.otherTask.trim();
   const label = r.note.trim() ? `${base} - ${r.note.trim()}` : base;
-  return `${label}: ${r.hours.trim()}`;
+  return `${label}: ${r.hours.trim() || '0'}`;
 }
 
 /** Recovers {otherTask, note} from a saved "other" entry's taskName. */
@@ -193,7 +201,7 @@ export function ImportReportModal({
                   link: e.href,
                   otherTask: '',
                   note: splitTeamworkNote(e.taskName),
-                  hours: String(e.hours),
+                  hours: e.hours ? String(e.hours) : '',
                   previewTitle: e.resolvedTitle ?? null,
                 };
               }
@@ -204,7 +212,7 @@ export function ImportReportModal({
                 link: '',
                 otherTask,
                 note,
-                hours: String(e.hours),
+                hours: e.hours ? String(e.hours) : '',
               };
             }),
           );
@@ -248,7 +256,9 @@ export function ImportReportModal({
   const incompleteRows = touchedRows.filter((r) => !isRowValid(r, config?.taskUrlPrefix));
   const validRows = touchedRows.filter((r) => isRowValid(r, config?.taskUrlPrefix));
   const totalHours =
-    Math.round(validRows.reduce((s, r) => s + parseFloat(r.hours), 0) * 100) / 100;
+    Math.round(validRows.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0) * 100) / 100;
+  /** No hours anywhere = a plan for the day, not a short workday. */
+  const anyHoursEntered = validRows.some((r) => r.hours.trim());
 
   const selectedMember = members.find((m) => m.id === memberId);
   const baseThreshold = selectedMember ? HOUR_THRESHOLD[selectedMember.role] : undefined;
@@ -256,7 +266,7 @@ export function ImportReportModal({
   // work is still expected (e.g. full-time 7h base - 4h leave = 3h).
   const threshold =
     baseThreshold != null ? Math.max(0, baseThreshold - (leaveHours ?? 0)) : undefined;
-  const underThreshold = threshold != null && totalHours < threshold;
+  const underThreshold = anyHoursEntered && threshold != null && totalHours < threshold;
   const fullDayOff = leaveHours === 8;
 
   const canSubmit = useMemo(() => {
@@ -298,7 +308,8 @@ export function ImportReportModal({
         const report = await api.importReport({ memberId, date, text });
         const total = report.entries.reduce((s, e) => s + e.hours, 0);
         setOk(
-          `Saved ${report.entries.length} tasks (${total}h)` +
+          `Saved ${report.entries.length} tasks` +
+            (total ? ` (${formatHours(total)})` : '') +
             (leaveHours ? ` + ${leaveHours}h leave` : '') +
             ` for ${report.member.name} on ${formatDate(report.date)}.`,
         );
@@ -524,6 +535,7 @@ export function ImportReportModal({
                                 type="number"
                                 step="0.5"
                                 min="0"
+                                placeholder="—"
                                 value={r.hours}
                                 onChange={(e) => updateRow(r.key, { hours: e.target.value })}
                                 style={{ width: '100%', textAlign: 'right' }}
@@ -557,7 +569,7 @@ export function ImportReportModal({
                   className="field-row"
                   style={{ marginTop: 14, alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                  <strong>Total: {totalHours}h</strong>
+                  <strong>Total: {formatHours(totalHours)}</strong>
                   {underThreshold && selectedMember && (
                     <span className="badge pending">
                       ⚠ Below {threshold}h for{' '}

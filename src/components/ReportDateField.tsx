@@ -253,7 +253,13 @@ export function ReportDateField({
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  title={reported ? `${hours}h reported` : undefined}
+                  title={
+                    reported
+                      ? hours
+                        ? `${hours}h reported`
+                        : 'Reported, no hours yet'
+                      : undefined
+                  }
                   onClick={() => {
                     onChange(iso);
                     setOpen(false);
