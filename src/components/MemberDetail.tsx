@@ -102,6 +102,7 @@ export function MemberDetail({
                           taskLabel(e)
                         )}
                       </span>
+                      {e.inProgress && <span className="wip-chip">In progress</span>}
                       <span className="hours-pill">{formatHours(e.hours)}</span>
                     </li>
                   ))}

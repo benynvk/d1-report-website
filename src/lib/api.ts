@@ -129,7 +129,15 @@ export const api = {
     memberId?: string;
     email?: string;
     date?: string;
+    /** Human-readable record of the submission (kept as the report's rawText). */
     text: string;
+    /** The tasks actually saved — carries what the text can't (inProgress). */
+    entries?: {
+      taskName?: string;
+      href?: string;
+      hours?: number;
+      inProgress?: boolean;
+    }[];
   }) =>
     request<DailyReport>('/reports/import', {
       method: 'POST',

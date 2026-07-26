@@ -22,6 +22,9 @@ interface RowState {
   otherTask: string;
   note: string;
   hours: string;
+  /** Ticked = not finished that day; the WIP summary reports it as
+   * "In progress" instead of "Done". */
+  inProgress: boolean;
   /** Resolved Teamwork task title, previewed in place of the raw link once
    * known. undefined = not looked up yet; null = looked up, not found. */
   previewTitle?: string | null;
@@ -37,6 +40,7 @@ function makeRow(): RowState {
     otherTask: '',
     note: '',
     hours: '',
+    inProgress: false,
     previewTitle: undefined,
     previewLoading: false,
   };
@@ -78,6 +82,23 @@ function rowToLine(r: RowState): string {
   const base = r.type === 'teamwork' ? r.link.trim() : r.otherTask.trim();
   const label = r.note.trim() ? `${base} - ${r.note.trim()}` : base;
   return `${label}: ${r.hours.trim() || '0'}`;
+}
+
+/** The row as the API stores it. Mirrors what the text parser would have
+ * produced (link + note for Teamwork tasks, "<task> - <note>" otherwise) and
+ * adds the in-progress flag, which the text format can't express. */
+function rowToEntry(r: RowState) {
+  const hours = parseFloat(r.hours) || 0;
+  const note = r.note.trim();
+  if (r.type === 'teamwork') {
+    return { href: r.link.trim(), taskName: note, hours, inProgress: r.inProgress };
+  }
+  const task = r.otherTask.trim();
+  return {
+    taskName: note ? `${task} - ${note}` : task,
+    hours,
+    inProgress: r.inProgress,
+  };
 }
 
 /** Recovers {otherTask, note} from a saved "other" entry's taskName. */
@@ -202,6 +223,7 @@ export function ImportReportModal({
                   otherTask: '',
                   note: splitTeamworkNote(e.taskName),
                   hours: e.hours ? String(e.hours) : '',
+                  inProgress: e.inProgress,
                   previewTitle: e.resolvedTitle ?? null,
                 };
               }
@@ -213,6 +235,7 @@ export function ImportReportModal({
                 otherTask,
                 note,
                 hours: e.hours ? String(e.hours) : '',
+                inProgress: e.inProgress,
               };
             }),
           );
@@ -305,7 +328,12 @@ export function ImportReportModal({
         setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
       } else if (validRows.length > 0) {
         const text = validRows.map(rowToLine).join('\n');
-        const report = await api.importReport({ memberId, date, text });
+        const report = await api.importReport({
+          memberId,
+          date,
+          text,
+          entries: validRows.map(rowToEntry),
+        });
         const total = report.entries.reduce((s, e) => s + e.hours, 0);
         setOk(
           `Saved ${report.entries.length} tasks` +
@@ -416,7 +444,8 @@ export function ImportReportModal({
                       <col style={{ width: 140 }} />
                       <col />
                       <col style={{ width: 200 }} />
-                      <col style={{ width: 96 }} />
+                      <col style={{ width: 84 }} />
+                      <col style={{ width: 92 }} />
                       <col style={{ width: 44 }} />
                     </colgroup>
                     <thead>
@@ -425,6 +454,7 @@ export function ImportReportModal({
                         <th>Link / Task</th>
                         <th>Note</th>
                         <th>Hours</th>
+                        <th>In progress</th>
                         <th></th>
                       </tr>
                     </thead>
@@ -539,6 +569,16 @@ export function ImportReportModal({
                                 value={r.hours}
                                 onChange={(e) => updateRow(r.key, { hours: e.target.value })}
                                 style={{ width: '100%', textAlign: 'right' }}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={r.inProgress}
+                                onChange={(e) =>
+                                  updateRow(r.key, { inProgress: e.target.checked })
+                                }
+                                title="Not finished on this day"
                               />
                             </td>
                             <td style={{ textAlign: 'center' }}>

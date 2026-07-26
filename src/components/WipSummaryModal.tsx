@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { DateField } from './DateField';
 import { Loading } from './Spinner';
 import { formatDate, taskLabel } from '@/lib/format';
-import type { DailyReport, Member, ReportEntry } from '@/lib/types';
+import type { DailyReport, Member } from '@/lib/types';
 
 function today(): string {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -33,11 +33,6 @@ function shortDate(iso: string): string {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Identity of a task across two days: its Teamwork link, else its label. */
-function taskKey(e: ReportEntry): string {
-  return (e.href?.trim() || taskLabel(e)).toLowerCase();
-}
-
 /**
  * Renders the two days into the plain-text block the leader pastes into the
  * manager's chat:
@@ -50,10 +45,8 @@ function taskKey(e: ReportEntry): string {
  *   Today:
  *   - Mob app UI improvement
  *
- * A task carried over into today's plan is reported as still In progress;
- * anything else from yesterday is Done. That's a guess from the data we
- * have (there's no status on an entry), which is why the result stays
- * editable before copying.
+ * Yesterday's status comes from each task's in-progress tick in the Add
+ * report modal — unticked means it was finished, so "Done".
  */
 function buildSummary(
   date: string,
@@ -85,14 +78,13 @@ function buildSummary(
     if (!slot?.yesterday && !slot?.today) continue;
 
     const lines = [`${m.name}:`];
-    const plannedToday = new Set((slot.today?.entries ?? []).map(taskKey));
 
     if (slot.yesterday) {
       const total = round2(slot.yesterday.entries.reduce((s, e) => s + e.hours, 0));
       lines.push(`Yesterday:${total ? ` (${total}h)` : ''}`);
       for (const e of slot.yesterday.entries) {
         const hours = e.hours ? ` (${round2(e.hours)}h)` : '';
-        const status = plannedToday.has(taskKey(e)) ? 'In progress' : 'Done';
+        const status = e.inProgress ? 'In progress' : 'Done';
         lines.push(`- ${taskLabel(e)}${hours} => ${status}`);
       }
     }

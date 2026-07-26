@@ -27,6 +27,8 @@ export interface ReportEntry {
   hours: number;
   href: string | null;
   resolvedTitle: string | null;
+  /** Task wasn't finished that day — reported as "In progress" in the WIP summary. */
+  inProgress: boolean;
   position: number;
 }
 
@@ -73,6 +75,7 @@ export interface MemberDayStat {
     hours: number;
     href: string | null;
     resolvedTitle: string | null;
+    inProgress: boolean;
   }[];
 }
 

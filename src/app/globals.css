@@ -1536,6 +1536,17 @@ label {
   padding: 1px 9px;
   font-variant-numeric: tabular-nums;
 }
+/* Task left unfinished that day — the WIP summary reports it "In progress". */
+.entries .wip-chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
 /* Uniform-width hours pills so day-total and task hours line up in a column. */
 .record-day .hours-pill {
   min-width: 52px;
