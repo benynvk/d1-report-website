@@ -1597,3 +1597,229 @@ label {
   color: var(--muted);
   font-style: italic;
 }
+
+/* ---------------------------------------------------------------------------
+   Monthly resource report (/reports/monthly)
+
+   The document deliberately ignores the app theme and hardcodes light colours:
+   it exists to be printed to PDF, and a dark-themed page prints as a dark
+   page. Sizes are in px against a fixed 860px document width so the on-screen
+   preview matches the A4 output.
+--------------------------------------------------------------------------- */
+.rpt-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.rpt-doc {
+  width: 860px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: #fff;
+  color: #111827;
+  padding: 30px 34px 24px;
+  border-radius: var(--radius);
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+.rpt-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #6366f1;
+}
+.rpt-head h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: #111827;
+}
+.rpt-range {
+  margin-top: 3px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.rpt-generated {
+  color: #9ca3af;
+  font-size: 11px;
+}
+.rpt-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.rpt-kpi,
+.rpt-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.rpt-kpi-label,
+.rpt-card-title {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.rpt-kpi-value {
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #4f46e5;
+  letter-spacing: -0.02em;
+}
+.rpt-kpi-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+.rpt-row {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.rpt-card {
+  margin-top: 12px;
+}
+.rpt-row .rpt-card {
+  margin-top: 0;
+}
+.rpt-donut {
+  display: block;
+  width: 150px;
+  margin: 10px auto 4px;
+}
+.rpt-legend {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 11.5px;
+}
+.rpt-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+  color: #374151;
+}
+.rpt-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  margin-right: 7px;
+}
+.rpt-chart {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+.rpt-axis {
+  font-size: 7.5px;
+  fill: #9ca3af;
+}
+.rpt-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+.rpt-doc th {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 9.5px;
+  color: #6b7280;
+  background: transparent;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 6px;
+  text-align: left;
+}
+.rpt-doc td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+.rpt-doc tbody tr:last-child td {
+  border-bottom: none;
+}
+.rpt-doc .r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rpt-doc .c {
+  text-align: center;
+}
+.rpt-strong {
+  font-weight: 700;
+  color: #111827;
+}
+.rpt-muted {
+  color: #9ca3af;
+}
+.rpt-barcell {
+  width: 26%;
+}
+.rpt-bar {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  min-width: 2px;
+}
+.rpt-tasks td:first-child {
+  padding-right: 14px;
+}
+.rpt-foot {
+  margin-top: 14px;
+  text-align: right;
+  font-size: 10.5px;
+  color: #9ca3af;
+}
+
+@media print {
+  /* Only the document prints: no sidebar, no toolbar, no page chrome. */
+  .sidebar,
+  .rpt-toolbar,
+  .alert {
+    display: none !important;
+  }
+  /* html/body included: their app background otherwise paints the leftover
+     space under the document on the last page. */
+  html,
+  body,
+  .app,
+  .main {
+    display: block;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+  }
+  .rpt-doc {
+    width: auto;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
+  /* The task log is long by nature: it must flow across pages, so only its
+     rows are kept whole. Everything else stays on one page. */
+  .rpt-card:not(.rpt-flow),
+  .rpt-kpi,
+  .rpt-doc tr {
+    break-inside: avoid;
+  }
+  .rpt-doc thead {
+    display: table-header-group;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

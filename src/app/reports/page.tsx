@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
@@ -129,6 +130,9 @@ export default function ReportsPage() {
           <button className="btn ghost" onClick={() => setShowWip(true)}>
             WIP summary
           </button>
+          <Link className="btn ghost" href={`/reports/monthly?month=${to.slice(0, 7)}`}>
+            Monthly PDF
+          </Link>
           <button className="btn" onClick={openAdd}>
             + Add
           </button>
