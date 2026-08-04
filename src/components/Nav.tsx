@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
+import { LOGO_URL } from '@/lib/brand';
 
 const ICON_PROPS = {
   width: 17,
@@ -73,9 +74,6 @@ const CONFIG_LINKS = [
   { href: '/task-types', label: 'Task Types', icon: <TaskTypesIcon /> },
 ];
 
-const LOGO =
-  'https://d1-mobile-app.s3.us-east-1.amazonaws.com/assets/d1_training_logo.png';
-
 export function Nav() {
   const pathname = usePathname();
   const inConfig = CONFIG_LINKS.some((l) => pathname.startsWith(l.href));
@@ -88,7 +86,7 @@ export function Nav() {
     <aside className="sidebar">
       <Link href="/" className="brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={LOGO} alt="D1 Training" className="brand-logo" />
+        <img src={LOGO_URL} alt="D1 Training" className="brand-logo" />
       </Link>
       <nav>
         {LINKS.map((l) => {

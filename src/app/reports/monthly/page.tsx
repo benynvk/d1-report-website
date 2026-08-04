@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
+import { Select } from '@/components/Select';
+import { LOGO_URL } from '@/lib/brand';
 import { taskLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
@@ -213,19 +215,15 @@ export default function MonthlyReportPage() {
   return (
     <>
       <div className="rpt-toolbar">
-        <div className="filter-inline">
+        <div className="filter-inline" style={{ minWidth: 190 }}>
           <label>Month</label>
-          <select
+          <Select
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            style={{ minWidth: 150 }}
-          >
-            {monthOptions.map((m) => (
-              <option key={m} value={m}>
-                {monthTitle(m)}
-              </option>
-            ))}
-          </select>
+            onChange={setMonth}
+            /* No empty option: a month is always selected. */
+            placeholder=""
+            options={monthOptions.map((m) => ({ value: m, label: monthTitle(m) }))}
+          />
         </div>
         <button className="btn" onClick={() => window.print()} disabled={loading}>
           Save as PDF
@@ -243,6 +241,8 @@ export default function MonthlyReportPage() {
         <div className="rpt-doc">
           <header className="rpt-head">
             <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={LOGO_URL} alt="D1 Training" className="rpt-logo" />
               <h1>D1 Training - Resource Report</h1>
               <div className="rpt-range">
                 {shortDate(data.from)} → {shortDate(data.to)}
