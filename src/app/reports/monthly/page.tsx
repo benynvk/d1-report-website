@@ -228,9 +228,6 @@ export default function MonthlyReportPage() {
         <button className="btn" onClick={() => window.print()} disabled={loading}>
           Save as PDF
         </button>
-        <span className="muted" style={{ fontSize: 12 }}>
-          Prints to A4 - pick &ldquo;Save as PDF&rdquo; as the destination.
-        </span>
       </div>
 
       {error && <div className="alert error">{error}</div>}
