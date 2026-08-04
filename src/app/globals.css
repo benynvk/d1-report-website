@@ -1829,3 +1829,20 @@ label {
     margin: 12mm;
   }
 }
+
+/* Panel head doubling as a filter bar (Reports): controls on the left, the
+   result count pushed to the right. Keeps the page head free for actions. */
+.panel-head.filter-head {
+  display: flex;
+  align-items: center;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  font-weight: 500;
+  padding: 12px 16px;
+}
+.filter-head-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}

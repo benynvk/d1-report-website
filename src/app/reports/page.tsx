@@ -105,7 +105,25 @@ export default function ReportsPage() {
             Browse submitted daily reports.
           </p>
         </div>
+        {/* Page actions only — the filters belong to the result list, so they
+            live in its panel head instead of competing for width up here. */}
         <div className="toolbar" style={{ margin: 0 }}>
+          <button className="btn ghost" onClick={() => setShowWip(true)}>
+            WIP summary
+          </button>
+          <Link className="btn ghost" href={`/reports/monthly?month=${to.slice(0, 7)}`}>
+            Monthly PDF
+          </Link>
+          <button className="btn" onClick={openAdd}>
+            + Add
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="panel">
+        <div className="panel-head filter-head">
           <div className="filter-inline">
             <label>From</label>
             <DateField value={from} onChange={setFrom} />
@@ -127,22 +145,8 @@ export default function ReportsPage() {
               }))}
             />
           </div>
-          <button className="btn ghost" onClick={() => setShowWip(true)}>
-            WIP summary
-          </button>
-          <Link className="btn ghost" href={`/reports/monthly?month=${to.slice(0, 7)}`}>
-            Monthly PDF
-          </Link>
-          <button className="btn" onClick={openAdd}>
-            + Add
-          </button>
+          <span className="filter-head-count">{reports.length} report(s)</span>
         </div>
-      </div>
-
-      {error && <div className="alert error">{error}</div>}
-
-      <div className="panel">
-        <div className="panel-head">{reports.length} report(s)</div>
         {loading ? (
           <Loading />
         ) : reports.length === 0 ? (
