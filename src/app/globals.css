@@ -1631,11 +1631,17 @@ label {
   padding-bottom: 10px;
   border-bottom: 2px solid #6366f1;
 }
+/* Logo sits on the right, balancing the title across the header. */
+.rpt-head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
 .rpt-logo {
   display: block;
   height: 26px;
   width: auto;
-  margin-bottom: 10px;
 }
 .rpt-head h1 {
   margin: 0;

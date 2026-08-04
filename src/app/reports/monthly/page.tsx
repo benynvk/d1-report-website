@@ -241,14 +241,16 @@ export default function MonthlyReportPage() {
         <div className="rpt-doc">
           <header className="rpt-head">
             <div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={LOGO_URL} alt="D1 Training" className="rpt-logo" />
               <h1>D1 Training - Resource Report</h1>
               <div className="rpt-range">
                 {shortDate(data.from)} → {shortDate(data.to)}
               </div>
             </div>
-            <div className="rpt-generated">Generated {generatedAt()}</div>
+            <div className="rpt-head-right">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={LOGO_URL} alt="D1 Training" className="rpt-logo" />
+              <div className="rpt-generated">Generated {generatedAt()}</div>
+            </div>
           </header>
 
           <section className="rpt-kpis">
