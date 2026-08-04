@@ -102,6 +102,17 @@ export default function MonthlyReportPage() {
     if (q && /^\d{4}-\d{2}$/.test(q)) setMonth(q);
   }, []);
 
+  // Chrome names the printed file after the document title, so match the
+  // format the manager's reports use: D1_Training_Resource_Report_Jul_2026.pdf
+  useEffect(() => {
+    const previous = document.title;
+    const [y, m] = month.split('-').map(Number);
+    document.title = `D1_Training_Resource_Report_${MONTHS[m - 1]}_${y}`;
+    return () => {
+      document.title = previous;
+    };
+  }, [month]);
+
   useEffect(() => {
     const { from, to } = monthBounds(month);
     let cancelled = false;
