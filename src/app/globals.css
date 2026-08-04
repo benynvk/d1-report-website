@@ -1507,15 +1507,35 @@ label {
   margin-bottom: 14px;
   font-size: 13px;
 }
+/* Tint the panel colour rather than hardcoding light-theme pastels: on dark
+   those washed-out backgrounds sat right next to the (also light) text and
+   the message was barely readable. */
 .alert.error {
-  background: #fef2f2;
-  color: var(--red);
-  border: 1px solid #fecaca;
+  background: color-mix(in srgb, var(--red) 12%, var(--panel));
+  color: #b91c1c;
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
 }
 .alert.ok {
-  background: #f0fdf4;
+  background: color-mix(in srgb, var(--green) 12%, var(--panel));
+  color: #15803d;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+}
+/* Saved, but something after the save didn't go through (e.g. the WIP sheet). */
+.alert.warn {
+  background: color-mix(in srgb, var(--amber) 12%, var(--panel));
+  color: #b45309;
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+}
+/* On dark the tinted panel is dark, so the bright accent is the readable one —
+   the deep shades above would sink into the background. */
+:root[data-theme='dark'] .alert.error {
+  color: var(--red);
+}
+:root[data-theme='dark'] .alert.ok {
   color: var(--green);
-  border: 1px solid #bbf7d0;
+}
+:root[data-theme='dark'] .alert.warn {
+  color: var(--amber);
 }
 .entries {
   margin: 0;

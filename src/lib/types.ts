@@ -43,6 +43,18 @@ export interface DailyReport {
   updatedAt: string;
 }
 
+/** How mirroring a saved report into the WIP spreadsheet went. */
+export interface WipSyncResult {
+  updated: boolean;
+  column?: 'morning' | 'evening';
+  date?: string;
+  taskCount?: number;
+  /** Nothing to write, by design (part-timer, no Teamwork task…). */
+  skipped?: string;
+  /** The write failed — the report itself is still saved. */
+  error?: string;
+}
+
 export type AttendanceStatus = 'holiday';
 
 export interface Attendance {

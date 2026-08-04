@@ -13,6 +13,7 @@ import type {
   WipConfig,
   WipDay,
   WipStatus,
+  WipSyncResult,
 } from './types';
 
 const BASE = (
@@ -139,7 +140,7 @@ export const api = {
       inProgress?: boolean;
     }[];
   }) =>
-    request<DailyReport>('/reports/import', {
+    request<DailyReport & { wipSync?: WipSyncResult }>('/reports/import', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

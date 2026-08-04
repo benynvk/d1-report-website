@@ -7,7 +7,7 @@ import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 import { ReportDateField } from './ReportDateField';
 import { formatDate, formatHours } from '@/lib/format';
-import type { Member, MemberRole, ReportConfig } from '@/lib/types';
+import type { Member, MemberRole, ReportConfig, WipSyncResult } from '@/lib/types';
 
 function today(): string {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -120,6 +120,17 @@ function splitTeamworkNote(taskName: string): string {
   return (taskName ?? '').trim().replace(/^[-–]\s*/, '');
 }
 
+/** Tail of the success message describing what happened to the WIP sheet.
+ * A failed write is left out here — it gets its own warning banner. */
+function wipNote(sync?: WipSyncResult): string {
+  if (!sync || sync.error) return '';
+  if (sync.updated) {
+    const when = sync.column === 'evening' ? 'Evening' : 'Morning';
+    return ` WIP sheet updated (${when}, ${formatDate(sync.date)}).`;
+  }
+  return sync.skipped ? ` WIP sheet not updated — ${sync.skipped}.` : '';
+}
+
 const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = {
   full_time: 7,
   part_time: 3.5,
@@ -162,6 +173,7 @@ export function ImportReportModal({
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
+  const [warn, setWarn] = useState('');
   const [saving, setSaving] = useState(false);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
@@ -302,6 +314,7 @@ export function ImportReportModal({
   const submit = async () => {
     setError('');
     setOk('');
+    setWarn('');
     if (!memberId) {
       setError('Select a member.');
       return;
@@ -339,8 +352,16 @@ export function ImportReportModal({
           `Saved ${report.entries.length} tasks` +
             (total ? ` (${formatHours(total)})` : '') +
             (leaveHours ? ` + ${leaveHours}h leave` : '') +
-            ` for ${report.member.name} on ${formatDate(report.date)}.`,
+            ` for ${report.member.name} on ${formatDate(report.date)}.` +
+            wipNote(report.wipSync),
         );
+        // A sheet that couldn't be written is worth flagging on its own — the
+        // report is saved either way, so it isn't an error.
+        if (report.wipSync?.error) {
+          setWarn(
+            `The report is saved, but the WIP sheet was not updated: ${report.wipSync.error}`,
+          );
+        }
       } else {
         setOk(`Saved ${leaveHours}h leave for ${who} on ${formatDate(date)}.`);
       }
@@ -362,6 +383,7 @@ export function ImportReportModal({
 
         {error && <div className="alert error">{error}</div>}
         {ok && <div className="alert ok">{ok}</div>}
+        {warn && <div className="alert warn">{warn}</div>}
 
         <div className="field-row">
           <div className="field" style={{ flex: 1, minWidth: 0 }}>
