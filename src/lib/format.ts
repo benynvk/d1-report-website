@@ -9,12 +9,12 @@ export function taskLabel(e: {
 
 /**
  * Task/day hours for display, rounded to 2 decimals. Hours are optional when
- * filing a report — a report written at the start of the day only lists what
- * the member plans to do — and those entries store 0, shown as a dash so the
+ * filing a report - a report written at the start of the day only lists what
+ * the member plans to do - and those entries store 0, shown as a dash so the
  * day doesn't read as "worked 0h".
  */
 export function formatHours(h?: number | null): string {
-  return h ? `${Math.round(h * 100) / 100}h` : '—';
+  return h ? `${Math.round(h * 100) / 100}h` : '-';
 }
 
 /** Formats an ISO date ('YYYY-MM-DD' or full ISO) as dd/mm/yyyy. */

@@ -51,7 +51,7 @@ function fromForPreset(key: string): string {
 }
 
 /** Defaults to month-to-date, unless we're less than a week into the month
- * (too short a range to be useful) — then last-7-days instead. */
+ * (too short a range to be useful) - then last-7-days instead. */
 function defaultPresetKey(): string {
   const dayOfMonth = Number(isoDaysAgo(0).slice(8, 10));
   return dayOfMonth < 7 ? '7' : 'mtd';
@@ -89,7 +89,7 @@ export default function HomePage() {
       .finally(() => setChartLoading(false));
   }, [from, to]);
 
-  // Today / Yesterday are independent of the range — load once.
+  // Today / Yesterday are independent of the range - load once.
   useEffect(() => {
     setDaysLoading(true);
     Promise.all([api.daily(tISO), api.daily(yISO)])
@@ -219,7 +219,7 @@ export default function HomePage() {
                 );
               })}
               {/* Overlaid line: total tasks per member. Segments draw one at
-                  a time, left to right — each starts only once the previous
+                  a time, left to right - each starts only once the previous
                   one has finished (no overlap). */}
               <svg
                 className="bar-line-overlay"

@@ -224,7 +224,7 @@ function WipPageInner() {
             {day.availableTabs && (
               <div style={{ marginTop: 6, fontSize: 13 }}>
                 {day.availableTabs.length === 0
-                  ? 'The sheet has no tabs at all — is this the right spreadsheet?'
+                  ? 'The sheet has no tabs at all - is this the right spreadsheet?'
                   : `Tabs in this sheet: ${day.availableTabs.join(', ')}`}
               </div>
             )}

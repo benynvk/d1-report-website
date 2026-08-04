@@ -171,7 +171,7 @@ a:hover {
 /* Square icon-only button (e.g. page-head settings gear) */
 /* Square icon buttons. Selector includes .btn on purpose: these are always
    used as "btn ghost icon-btn", and the .btn rule further down the file would
-   otherwise win on source order and re-apply its 8px 15px padding — which
+   otherwise win on source order and re-apply its 8px 15px padding - which
    squeezed the 20px glyph inside the fixed 38px box down to 6px wide. */
 .btn.icon-btn {
   display: inline-flex;
@@ -197,7 +197,7 @@ a:hover {
   color: var(--red, #e5484d);
 }
 
-/* Resolved Teamwork link preview — replaces the raw-URL input once a title
+/* Resolved Teamwork link preview - replaces the raw-URL input once a title
    is known, styled to match input/select so it doesn't look like a new
    element type. */
 .link-preview {
@@ -213,7 +213,7 @@ a:hover {
   color: var(--text);
 }
 /* Task names run long ("Coach App: Inches-only scoring input + …"), so wrap
-   to two lines and clip the rest rather than pushing the row wider — the
+   to two lines and clip the rest rather than pushing the row wider - the
    full name is in the tooltip. */
 .link-preview-title {
   display: -webkit-box;
@@ -230,7 +230,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Theme toggle — icon only */
+/* Theme toggle - icon only */
 .theme-toggle {
   display: flex;
   align-items: center;
@@ -851,7 +851,7 @@ td.c {
   box-shadow: var(--shadow);
   overflow-x: auto;
 }
-/* Like .panel, but no overflow-x — needed when a table cell holds a
+/* Like .panel, but no overflow-x - needed when a table cell holds a
    popover (e.g. the row Select dropdowns) that must overlay past the
    frame's edge instead of getting clipped. */
 /* Wraps the Add report task table. Deliberately no overflow-x here: any
@@ -902,7 +902,7 @@ tbody tr:last-child td {
 /* Fixed layout so the colgroup widths are honoured: with auto layout a long
    resolved task title stretches the Link/Task column and squeezes Note and
    Hours down to nothing. Needs the explicit width from the `table` rule
-   above (width: 100%) — fixed layout is ignored on an auto-width table. Only
+   above (width: 100%) - fixed layout is ignored on an auto-width table. Only
    Link/Task is left width-less, so it absorbs whatever space is left. */
 .report-table {
   table-layout: fixed;
@@ -1526,7 +1526,7 @@ label {
   color: #b45309;
   border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
 }
-/* On dark the tinted panel is dark, so the bright accent is the readable one —
+/* On dark the tinted panel is dark, so the bright accent is the readable one -
    the deep shades above would sink into the background. */
 :root[data-theme='dark'] .alert.error {
   color: var(--red);
@@ -1576,7 +1576,7 @@ label {
   padding: 1px 9px;
   font-variant-numeric: tabular-nums;
 }
-/* Task left unfinished that day — the WIP summary reports it "In progress". */
+/* Task left unfinished that day - the WIP summary reports it "In progress". */
 .entries .wip-chip {
   flex-shrink: 0;
   font-size: 11px;

@@ -12,7 +12,7 @@ function today(): string {
 }
 
 /**
- * The working day before `iso` — weekends are skipped, so the "yesterday"
+ * The working day before `iso` - weekends are skipped, so the "yesterday"
  * of a Monday is the Friday before it.
  */
 function prevWorkingDay(iso: string): string {
@@ -46,7 +46,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  *   - Mob app UI improvement
  *
  * Yesterday's status comes from each task's in-progress tick in the Add
- * report modal — unticked means it was finished, so "Done".
+ * report modal - unticked means it was finished, so "Done".
  */
 function buildSummary(
   date: string,
@@ -150,7 +150,7 @@ export function WipSummaryModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Could not reach the clipboard — select the text and copy it manually.');
+      setError('Could not reach the clipboard - select the text and copy it manually.');
     }
   };
 

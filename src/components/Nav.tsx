@@ -80,7 +80,7 @@ export function Nav() {
   const pathname = usePathname();
   const inConfig = CONFIG_LINKS.some((l) => pathname.startsWith(l.href));
   const [configOpen, setConfigOpen] = useState(inConfig);
-  // Home is a clean public dashboard — no sidebar. Reach management pages by
+  // Home is a clean public dashboard - no sidebar. Reach management pages by
   // typing their URL (e.g. /members).
   if (pathname === '/') return null;
 

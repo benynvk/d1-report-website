@@ -40,13 +40,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(message);
   }
-  // DELETE/PATCH handlers may return an empty body with a 200/204 status —
+  // DELETE/PATCH handlers may return an empty body with a 200/204 status -
   // parse as JSON only when there's actually content, regardless of status code.
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-// The member list rarely changes and is fetched from several pages/modals —
+// The member list rarely changes and is fetched from several pages/modals -
 // cache it in memory for the session, and actively drop the cache whenever
 // a member is created/updated/deleted so the next read is always fresh.
 let membersCache: Member[] | null = null;
@@ -132,7 +132,7 @@ export const api = {
     date?: string;
     /** Human-readable record of the submission (kept as the report's rawText). */
     text: string;
-    /** The tasks actually saved — carries what the text can't (inProgress). */
+    /** The tasks actually saved - carries what the text can't (inProgress). */
     entries?: {
       taskName?: string;
       href?: string;

@@ -1,6 +1,6 @@
 /**
  * Reads an image File, resizes it so the longest side is ≤ maxPx, and returns
- * a compressed JPEG/PNG data URL. Runs entirely in the browser (canvas) — the
+ * a compressed JPEG/PNG data URL. Runs entirely in the browser (canvas) - the
  * result is a small base64 string stored in the DB, no object storage needed.
  */
 export function resizeImage(file: File, maxPx = 300): Promise<string> {

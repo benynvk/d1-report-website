@@ -27,7 +27,7 @@ export interface ReportEntry {
   hours: number;
   href: string | null;
   resolvedTitle: string | null;
-  /** Task wasn't finished that day — reported as "In progress" in the WIP summary. */
+  /** Task wasn't finished that day - reported as "In progress" in the WIP summary. */
   inProgress: boolean;
   position: number;
 }
@@ -51,7 +51,7 @@ export interface WipSyncResult {
   taskCount?: number;
   /** Nothing to write, by design (part-timer, no Teamwork task…). */
   skipped?: string;
-  /** The write failed — the report itself is still saved. */
+  /** The write failed - the report itself is still saved. */
   error?: string;
 }
 

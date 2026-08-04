@@ -46,7 +46,7 @@ function makeRow(): RowState {
   };
 }
 
-/** A row counts as "touched" once any field has content — used to tell an
+/** A row counts as "touched" once any field has content - used to tell an
  * intentionally-filled-in row from a still-blank spare one. */
 function isRowTouched(r: RowState): boolean {
   return !!r.link.trim() || !!r.otherTask.trim() || !!r.note.trim() || !!r.hours.trim();
@@ -73,7 +73,7 @@ function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
 
 /** Serializes a valid row into the "<link or task>: <hours>" line the
  * backend's report-text parser already understands. A note (if any) rides
- * along in the task-name text ("<link/task> - <note>") — there's no
+ * along in the task-name text ("<link/task> - <note>") - there's no
  * dedicated note column server-side, so it round-trips through taskName.
  * Blank hours go out as 0: the parser only recognises a task line by its
  * trailing number, and 0 is how "no hours yet" is stored (the column is
@@ -121,14 +121,14 @@ function splitTeamworkNote(taskName: string): string {
 }
 
 /** Tail of the success message describing what happened to the WIP sheet.
- * A failed write is left out here — it gets its own warning banner. */
+ * A failed write is left out here - it gets its own warning banner. */
 function wipNote(sync?: WipSyncResult): string {
   if (!sync || sync.error) return '';
   if (sync.updated) {
     const when = sync.column === 'evening' ? 'Evening' : 'Morning';
     return ` WIP sheet updated (${when}, ${formatDate(sync.date)}).`;
   }
-  return sync.skipped ? ` WIP sheet not updated — ${sync.skipped}.` : '';
+  return sync.skipped ? ` WIP sheet not updated - ${sync.skipped}.` : '';
 }
 
 const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = {
@@ -355,7 +355,7 @@ export function ImportReportModal({
             ` for ${report.member.name} on ${formatDate(report.date)}.` +
             wipNote(report.wipSync),
         );
-        // A sheet that couldn't be written is worth flagging on its own — the
+        // A sheet that couldn't be written is worth flagging on its own - the
         // report is saved either way, so it isn't an error.
         if (report.wipSync?.error) {
           setWarn(
@@ -590,7 +590,7 @@ export function ImportReportModal({
                                 type="number"
                                 step="0.5"
                                 min="0"
-                                placeholder="—"
+                                placeholder="-"
                                 value={r.hours}
                                 onChange={(e) => updateRow(r.key, { hours: e.target.value })}
                                 style={{ width: '100%', textAlign: 'right' }}

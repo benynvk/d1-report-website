@@ -144,7 +144,7 @@ export default function MonthlyReportPage() {
 
     const totalHours = people.reduce((s, p) => s + p.hours, 0);
 
-    // Hours per weekday, split by person — the stacked daily chart.
+    // Hours per weekday, split by person - the stacked daily chart.
     const daily = days.filter(isWeekday).map((d) => {
       const date = iso(d);
       const parts = people.map((p) => {
@@ -229,7 +229,7 @@ export default function MonthlyReportPage() {
           Save as PDF
         </button>
         <span className="muted" style={{ fontSize: 12 }}>
-          Prints to A4 — pick &ldquo;Save as PDF&rdquo; as the destination.
+          Prints to A4 - pick &ldquo;Save as PDF&rdquo; as the destination.
         </span>
       </div>
 
@@ -241,7 +241,7 @@ export default function MonthlyReportPage() {
         <div className="rpt-doc">
           <header className="rpt-head">
             <div>
-              <h1>D1 Training — Resource Report</h1>
+              <h1>D1 Training - Resource Report</h1>
               <div className="rpt-range">
                 {shortDate(data.from)} → {shortDate(data.to)}
               </div>
