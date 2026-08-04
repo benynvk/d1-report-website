@@ -149,6 +149,8 @@ export interface WipDay {
   tabName: string;
   configured: boolean;
   rows: WipRow[];
+  /** Sent only when the day's tab came back empty: the sheet's real tab names. */
+  availableTabs?: string[];
 }
 
 export interface ChatMember {

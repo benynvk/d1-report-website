@@ -169,7 +169,11 @@ a:hover {
 }
 
 /* Square icon-only button (e.g. page-head settings gear) */
-.icon-btn {
+/* Square icon buttons. Selector includes .btn on purpose: these are always
+   used as "btn ghost icon-btn", and the .btn rule further down the file would
+   otherwise win on source order and re-apply its 8px 15px padding — which
+   squeezed the 20px glyph inside the fixed 38px box down to 6px wide. */
+.btn.icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -179,7 +183,7 @@ a:hover {
   flex-shrink: 0;
 }
 
-.row-remove-btn {
+.btn.row-remove-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -208,10 +212,16 @@ a:hover {
   background: var(--input-bg);
   color: var(--text);
 }
+/* Task names run long ("Coach App: Inches-only scoring input + …"), so wrap
+   to two lines and clip the rest rather than pushing the row wider — the
+   full name is in the tooltip. */
 .link-preview-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -844,6 +854,8 @@ td.c {
 /* Like .panel, but no overflow-x — needed when a table cell holds a
    popover (e.g. the row Select dropdowns) that must overlay past the
    frame's edge instead of getting clipped. */
+/* Wraps the Add report task table. Deliberately no overflow-x here: any
+   overflow value other than visible would clip the row Selects' dropdowns. */
 .table-frame {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -887,6 +899,14 @@ tbody tr:last-child td {
    default top/left table alignment. Horizontal padding is half of the
    Member/Date field-row gap (14px) so adjacent columns read the same
    distance apart as those fields do. */
+/* Fixed layout so the colgroup widths are honoured: with auto layout a long
+   resolved task title stretches the Link/Task column and squeezes Note and
+   Hours down to nothing. Needs the explicit width from the `table` rule
+   above (width: 100%) — fixed layout is ignored on an auto-width table. Only
+   Link/Task is left width-less, so it absorbs whatever space is left. */
+.report-table {
+  table-layout: fixed;
+}
 .report-table th,
 .report-table td {
   padding: 10px 7px;

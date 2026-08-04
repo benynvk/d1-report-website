@@ -440,12 +440,15 @@ export function ImportReportModal({
               >
                 <div className="table-frame">
                   <table className="report-table">
+                    {/* Link/Task is the only width-less column: with
+                        table-layout: fixed it takes whatever the others
+                        leave, so a long task name can't squeeze them. */}
                     <colgroup>
-                      <col style={{ width: 140 }} />
+                      <col style={{ width: 130 }} />
                       <col />
-                      <col style={{ width: 200 }} />
-                      <col style={{ width: 84 }} />
-                      <col style={{ width: 92 }} />
+                      <col style={{ width: 170 }} />
+                      <col style={{ width: 80 }} />
+                      <col style={{ width: 104 }} />
                       <col style={{ width: 44 }} />
                     </colgroup>
                     <thead>
@@ -489,7 +492,7 @@ export function ImportReportModal({
                                       target="_blank"
                                       rel="noreferrer"
                                       className="link-preview-title"
-                                      title={r.link}
+                                      title={`${r.previewTitle}\n${r.link}`}
                                     >
                                       {r.previewTitle}
                                     </a>
