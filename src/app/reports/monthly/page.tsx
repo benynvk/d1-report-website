@@ -50,10 +50,10 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 /** Every figure in the document carries one decimal, like the reference. */
 const n1 = (n: number) => n.toFixed(1);
 
-/** '2026-08-04' -> '4/8/26', the compact form the report header uses. */
+/** '2026-08-04' -> '04/08/26', the compact form the report header uses. */
 function shortDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  return `${d}/${m}/${String(y).slice(2)}`;
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
 }
 
 function monthTitle(month: string): string {
@@ -155,7 +155,9 @@ export default function MonthlyReportPage() {
       });
       return {
         date,
-        label: `${d.getUTCDate()}/${d.getUTCMonth() + 1}`,
+        label: `${String(d.getUTCDate()).padStart(2, '0')}/${String(
+          d.getUTCMonth() + 1,
+        ).padStart(2, '0')}`,
         parts,
         total: parts.reduce((s, x) => s + x.hours, 0),
       };
