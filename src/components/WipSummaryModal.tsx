@@ -45,8 +45,9 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  *   Today:
  *   - Mob app UI improvement
  *
- * Yesterday's status comes from each task's in-progress tick in the Add
- * report modal - unticked means it was finished, so "Done".
+ * Yesterday's status comes from each Teamwork task's in-progress tick in the
+ * Add report modal - unticked means it was finished, so "Done". "Other task"
+ * rows never carry a status.
  */
 function buildSummary(
   date: string,
@@ -84,8 +85,12 @@ function buildSummary(
       lines.push(`Yesterday:${total ? ` (${total}h)` : ''}`);
       for (const e of slot.yesterday.entries) {
         const hours = e.hours ? ` (${round2(e.hours)}h)` : '';
-        const status = e.inProgress ? 'In progress' : 'Done';
-        lines.push(`- ${taskLabel(e)}${hours} => ${status}`);
+        // Only Teamwork tasks get a status: an "other task" (a meeting, a
+        // review) is nothing you finish, so it never reads Done/In progress.
+        const status = e.href
+          ? ` => ${e.inProgress ? 'In progress' : 'Done'}`
+          : '';
+        lines.push(`- ${taskLabel(e)}${hours}${status}`);
       }
     }
     if (slot.today) {
