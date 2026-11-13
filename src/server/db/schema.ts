@@ -110,6 +110,8 @@ export const reportEntries = d1.table(
     /** Official task name from the Teamwork API. */
     resolvedTitle: varchar('resolvedTitle'),
     inProgress: boolean('inProgress').notNull().default(false),
+    /** % complete of an in-progress task (0-99), optional — migrations/0002. */
+    progress: integer('progress'),
   },
   (t) => [index('IDX_5189040bf7e0f718524cafc9dd').on(t.reportId)],
 );

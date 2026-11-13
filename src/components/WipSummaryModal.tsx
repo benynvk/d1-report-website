@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { DateField } from './DateField';
 import { Loading } from './Spinner';
-import { formatDate, reportLabel } from '@/lib/format';
+import { formatDate, progressLabel, reportLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 function today(): string {
@@ -88,7 +88,7 @@ function buildSummary(
         // Only Teamwork tasks get a status: an "other task" (a meeting, a
         // review) is nothing you finish, so it never reads Done/In progress.
         const status = e.href
-          ? ` => ${e.inProgress ? 'In progress' : 'Done'}`
+          ? ` => ${e.inProgress ? progressLabel(e) : 'Done'}`
           : '';
         lines.push(`- ${reportLabel(e)}${hours}${status}`);
       }

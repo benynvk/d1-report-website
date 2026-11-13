@@ -2623,3 +2623,38 @@ label {
     grid-template-columns: minmax(0, 1fr) 70px 34px;
   }
 }
+
+/* In progress: the checkbox, then an optional % once ticked. */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 39px;
+}
+.progress-cell > input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.progress-input {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.task-row .progress-input input {
+  width: 48px;
+  padding: 8px 4px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.progress-input input::-webkit-outer-spin-button,
+.progress-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.progress-input span {
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -21,6 +21,7 @@ export interface MemberDayStat {
     href: string | null;
     resolvedTitle: string | null;
     inProgress: boolean;
+    progress: number | null;
   }[];
 }
 
@@ -61,6 +62,7 @@ export async function dailyOverview(date: string) {
         href: e.href,
         resolvedTitle: e.resolvedTitle ?? null,
         inProgress: e.inProgress ?? false,
+        progress: e.progress ?? null,
       })),
     };
   });

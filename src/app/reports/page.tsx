@@ -11,7 +11,7 @@ import { DateField } from '@/components/DateField';
 import { ImportReportModal } from '@/components/ImportReportModal';
 import { WipSummaryModal } from '@/components/WipSummaryModal';
 import { ChatIcon, EditIcon, TrashIcon } from '@/components/icons';
-import { addDays, formatDayLong, formatHours, taskLabel, todayVN } from '@/lib/format';
+import { addDays, formatDayLong, formatHours, progressLabel, taskLabel, todayVN } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 const sum = (r: DailyReport) => r.entries.reduce((s, e) => s + e.hours, 0);
@@ -233,7 +233,7 @@ export default function ReportsPage() {
                               ) : (
                                 taskLabel(e)
                               )}
-                              {e.inProgress && <span className="wip-chip">In progress</span>}
+                              {e.inProgress && <span className="wip-chip">{progressLabel(e)}</span>}
                             </span>
                           </li>
                         ))}

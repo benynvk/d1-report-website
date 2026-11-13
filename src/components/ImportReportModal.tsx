@@ -22,6 +22,8 @@ interface RowState {
   hours: string;
   /** Not finished that day — the WIP summary says "In progress", not "Done". */
   inProgress: boolean;
+  /** Optional % complete while in progress ("" = not given). */
+  progress: string;
   /** Teamwork title for a link: undefined = not looked up, null = not found. */
   previewTitle?: string | null;
   previewLoading?: boolean;
@@ -41,6 +43,7 @@ const makeRow = (patch: Partial<RowState> = {}): RowState => ({
   note: '',
   hours: '',
   inProgress: false,
+  progress: '',
   ...patch,
 });
 
@@ -71,6 +74,10 @@ function rowError(r: RowState, config: ReportConfig | null): string | null {
     const h = parseFloat(r.hours);
     if (Number.isNaN(h) || h <= 0) return 'Hours must be a positive number.';
   }
+  if (r.inProgress && r.progress.trim()) {
+    const p = Number(r.progress);
+    if (!Number.isInteger(p) || p < 0 || p > 99) return 'Progress is 0-99% - untick In progress once it is done.';
+  }
   const text = r.text.trim();
   if (!text) return 'Paste a Teamwork link, pick a task type, or describe the task.';
   if (isLink(text)) {
@@ -86,16 +93,17 @@ function rowError(r: RowState, config: ReportConfig | null): string | null {
 /** The row as the API stores it ("<type> - <note>" for no-link tasks). */
 function rowToEntry(r: RowState, config: ReportConfig | null) {
   const hours = parseFloat(r.hours) || 0;
+  const progress = r.inProgress && r.progress.trim() ? Number(r.progress) : null;
   const note = r.note.trim();
   const text = r.text.trim();
   if (isLink(text)) {
-    return { href: canonicalTeamworkLink(text, config?.taskUrlPrefix) ?? text, taskName: note, hours, inProgress: r.inProgress };
+    return { href: canonicalTeamworkLink(text, config?.taskUrlPrefix) ?? text, taskName: note, hours, inProgress: r.inProgress, progress };
   }
   const allowed = config?.noUrlAllowedTasks ?? [];
   const type = taskTypeOf(text, allowed);
   // A known type keeps "<type> - <note>"; free text becomes "Other - <text>".
   const name = type ?? `${otherTypeOf(allowed) ?? 'Other'} - ${text}`;
-  return { taskName: note ? `${name} - ${note}` : name, hours, inProgress: r.inProgress };
+  return { taskName: note ? `${name} - ${note}` : name, hours, inProgress: r.inProgress, progress };
 }
 
 /** The human-readable record kept as the report's raw text. */
@@ -112,6 +120,7 @@ function rowsFromReport(report: DailyReport, allowed: string[], keepHours: boole
         note: (e.taskName ?? '').trim().replace(/^[-–]\s*/, ''),
         hours,
         inProgress: keepHours ? e.inProgress : false,
+        progress: keepHours && e.progress != null ? String(e.progress) : '',
         previewTitle: e.resolvedTitle ?? null,
       });
     }
@@ -124,6 +133,7 @@ function rowsFromReport(report: DailyReport, allowed: string[], keepHours: boole
       note: asFreeText ? '' : rest,
       hours,
       inProgress: keepHours ? e.inProgress : false,
+      progress: keepHours && e.progress != null ? String(e.progress) : '',
     });
   });
 }
@@ -295,7 +305,7 @@ export function ImportReportModal({
       const i = rs.findIndex((x) => x.key === r.key);
       const head = rs.slice(0, i);
       const tail = rs.slice(i + 1).filter((x) => !isBlank(x));
-      const first = { ...created[0], key: r.key, note: r.note, hours: r.hours, inProgress: r.inProgress };
+      const first = { ...created[0], key: r.key, note: r.note, hours: r.hours, inProgress: r.inProgress, progress: r.progress };
       return [...head, first, ...created.slice(1), ...tail];
     });
     [{ ...created[0], key: r.key }, ...created.slice(1)].forEach((x) => resolvePreview(x.key, x.text));
@@ -639,13 +649,33 @@ export function ImportReportModal({
                       onKeyDown={(e) => onRowKey(r, e)}
                       className="r"
                     />
-                    <label className="c switch-cell" title="Not finished on this day">
+                    <div className="progress-cell">
                       <input
                         type="checkbox"
                         checked={r.inProgress}
-                        onChange={(e) => updateRow(r.key, { inProgress: e.target.checked })}
+                        onChange={(e) => updateRow(r.key, { inProgress: e.target.checked, progress: '' })}
+                        title="Not finished on this day"
+                        aria-label="In progress"
                       />
-                    </label>
+                      {r.inProgress && (
+                        <div className="progress-input">
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            step="5"
+                            inputMode="numeric"
+                            placeholder="-"
+                            value={r.progress}
+                            onChange={(e) => updateRow(r.key, { progress: e.target.value })}
+                            onKeyDown={(e) => onRowKey(r, e)}
+                            aria-label="% complete"
+                            title="% complete (optional)"
+                          />
+                          <span>%</span>
+                        </div>
+                      )}
+                    </div>
                     <button
                       className="icon-only danger"
                       onClick={() => removeRow(r.key)}

@@ -170,6 +170,8 @@ api.post('/reports/import', async (c) => {
             href: z.string().optional(),
             hours: z.number().min(0).optional(),
             inProgress: z.boolean().optional(),
+            /** % complete of an in-progress task; a finished task is just not in progress. */
+            progress: z.number().int().min(0).max(99).nullish(),
           }),
         )
         .optional(),

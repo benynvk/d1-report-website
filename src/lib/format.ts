@@ -12,6 +12,11 @@ export function taskLabel(e: {
   return e.href ? label : label.replace(/^other\s+-\s+/i, '') || label;
 }
 
+/** "In progress" / "In progress (40%)" for a task left unfinished. */
+export function progressLabel(e: { progress?: number | null }): string {
+  return e.progress != null ? `In progress (${e.progress}%)` : 'In progress';
+}
+
 /** Task name in generated reports (WIP summary, monthly report) — same as taskLabel. */
 export const reportLabel = taskLabel;
 

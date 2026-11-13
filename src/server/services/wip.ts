@@ -662,7 +662,9 @@ export async function syncReport(
       column === 'evening'
         ? `${e.hours ? ` (${Math.round(e.hours * 100) / 100}h)` : ''}` +
           // Only Teamwork tasks get a status — a meeting is nothing you finish.
-          (e.href ? ` => ${e.inProgress ? 'In progress' : 'Done'}` : '')
+          (e.href
+            ? ` => ${e.inProgress ? `In progress${e.progress != null ? ` (${e.progress}%)` : ''}` : 'Done'}`
+            : '')
         : undefined,
   }));
 

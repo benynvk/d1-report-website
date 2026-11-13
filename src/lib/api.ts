@@ -153,6 +153,7 @@ export const api = {
       href?: string;
       hours?: number;
       inProgress?: boolean;
+      progress?: number | null;
     }[];
   }) =>
     request<DailyReport & { wipSync?: WipSyncResult }>('/reports/import', {

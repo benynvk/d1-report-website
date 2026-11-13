@@ -31,6 +31,8 @@ export type DailyReport = Omit<DailyReportRow, 'memberId' | 'rawText' | 'created
 /** A task plus what the text format can't carry. */
 export interface UpsertEntry extends ParsedEntry {
   inProgress?: boolean;
+  /** % complete when in progress (0-99). */
+  progress?: number | null;
 }
 
 export interface ListFilters {
@@ -84,7 +86,7 @@ async function loadJson(where: SQL): Promise<string> {
           'entries', coalesce((
             select json_agg(json_build_object(
               'id', e.id, 'taskName', e."taskName", 'hours', e.hours, 'href', e.href, 'position', e.position,
-              'resolvedTitle', e."resolvedTitle", 'inProgress', e."inProgress") order by e.position)
+              'resolvedTitle', e."resolvedTitle", 'inProgress', e."inProgress", 'progress', e.progress) order by e.position)
             from ${reportEntries} e where e.report_id = r.id), '[]'::json)
         ) as report
       from ${dailyReports} r join ${schema.members} m on m.id = r.member_id
@@ -220,6 +222,7 @@ export async function upsert(input: {
           href: e.href,
           resolvedTitle: titles[i] ?? null,
           inProgress: e.inProgress ?? false,
+          progress: e.inProgress && e.progress != null ? e.progress : null,
           position: i,
         })),
       ),
@@ -238,7 +241,7 @@ export async function importManual(dto: {
   email?: string;
   date?: string;
   text: string;
-  entries?: { taskName?: string; href?: string; hours?: number; inProgress?: boolean }[];
+  entries?: { taskName?: string; href?: string; hours?: number; inProgress?: boolean; progress?: number | null }[];
 }): Promise<DailyReport & { wipSync: wip.WipSyncResult }> {
   let member: Member | null;
   if (dto.memberId) {
@@ -260,6 +263,7 @@ export async function importManual(dto: {
       href: e.href?.trim() || null,
       hours: e.hours ?? 0,
       inProgress: e.inProgress ?? false,
+      progress: e.progress ?? null,
     })),
   });
 
