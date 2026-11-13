@@ -1,0 +1,24 @@
+{
+  // One Worker: the static Next.js export (./out) + the API (/api/*) + cron jobs.
+  "name": "d1-report",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+  "triggers": {
+    // UTC. Vietnam = UTC+7. Keep in sync with SCHEDULE in worker/src/index.ts.
+    "crons": [
+      "30 2 * * MON-FRI", // 09:30 WIP reminder
+      "45 2 * * MON-FRI", // 09:45 auto-WIP
+      "0 11 * * MON-FRI"  // 18:00 evening WIP reminder
+    ]
+  },
+  "observability": { "enabled": true }
+  // Secrets (set with `wrangler secret put`, or in .dev.vars locally):
+  //   DATABASE_URL, TEAMWORK_API_TOKEN, GOOGLE_CHAT_WEBHOOK_URL,
+  //   GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_CHAT_PROJECT_NUMBER
+}

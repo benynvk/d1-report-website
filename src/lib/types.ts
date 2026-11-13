@@ -21,6 +21,9 @@ export interface Member {
   createdAt: string;
 }
 
+/** A member as embedded in reports/attendance: everything but the avatar. */
+export type MemberRef = Omit<Member, 'avatarUrl'>;
+
 export interface ReportEntry {
   id: string;
   taskName: string;
@@ -35,9 +38,8 @@ export interface ReportEntry {
 export interface DailyReport {
   id: string;
   date: string;
-  rawText: string;
   source: 'google-chat' | 'manual';
-  member: Member;
+  member: MemberRef;
   entries: ReportEntry[];
   createdAt: string;
   updatedAt: string;
@@ -62,7 +64,7 @@ export interface Attendance {
   date: string;
   status: AttendanceStatus;
   hours: number | null;
-  member: Member;
+  member: MemberRef;
 }
 
 export interface TaskType {

@@ -16,9 +16,18 @@ import type {
   WipSyncResult,
 } from './types';
 
-const BASE = (
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
-).replace(/\/$/, '');
+// The API is served by the same Worker as the site, under /api. Override only
+// for `next dev` against a separately running `wrangler dev` (see README).
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? '/api').replace(/\/$/, '');
+
+/**
+ * Avatars come back as API paths ("/api/members/<id>/avatar"). Same-origin in
+ * production; this only rewrites them when the API is on another origin.
+ */
+export function assetUrl(src?: string | null): string | undefined {
+  if (!src) return undefined;
+  return src.startsWith('/api/') && /^https?:/.test(BASE) ? new URL(BASE).origin + src : src;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

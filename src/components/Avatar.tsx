@@ -1,3 +1,5 @@
+import { assetUrl } from '@/lib/api';
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0]?.[0] ?? '';
@@ -18,7 +20,7 @@ export function Avatar({
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
-      <img className="avatar" src={src} alt={name} style={style} />
+      <img className="avatar" src={assetUrl(src)} alt={name} style={style} />
     );
   }
   return (

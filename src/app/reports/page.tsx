@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Select } from '@/components/Select';
 import { Loading } from '@/components/Spinner';
@@ -48,6 +48,10 @@ export default function ReportsPage() {
   useEffect(() => {
     api.listMembers().then(setMembers).catch(() => {});
   }, []);
+
+  // Reports carry their member without the avatar (it's a base64 image) -
+  // look it up from the member list instead.
+  const avatarOf = useMemo(() => new Map(members.map((m) => [m.id, m.avatarUrl])), [members]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -169,7 +173,7 @@ export default function ReportsPage() {
                   <td className="c mid">{formatDate(r.date)}</td>
                   <td className="mid">
                     <div className="member-cell">
-                      <Avatar name={r.member.name} src={r.member.avatarUrl} size={28} />
+                      <Avatar name={r.member.name} src={avatarOf.get(r.member.id)} size={28} />
                       <span style={{ fontWeight: 600 }}>{r.member.name}</span>
                     </div>
                   </td>

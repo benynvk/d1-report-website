@@ -1,0 +1,20 @@
+# Local secrets for `wrangler dev`. Copy to .dev.vars (gitignored).
+# In production set the same names with `npx wrangler secret put <NAME>`.
+
+# REQUIRED — Neon connection string.
+DATABASE_URL=postgresql://user:pass@ep-xxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+
+# Resolves task names from Teamwork links; needed for auto-WIP.
+TEAMWORK_API_TOKEN=
+
+# Incoming webhook of the team's Chat space. Leave empty locally so test
+# runs of the reminders don't post into the real space.
+GOOGLE_CHAT_WEBHOOK_URL=
+
+# OAuth client used to read/write the WIP Google Sheet.
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+
+# Google Cloud project number of the Chat app; when set, webhook calls
+# without a valid Google-signed token are rejected.
+GOOGLE_CHAT_PROJECT_NUMBER=
