@@ -4,8 +4,7 @@
 // every path (and query) to the app's home on Vercel.
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-// TODO: set to the Vercel production URL before pushing.
-const TARGET = 'https://d1-report.benynvk.workers.dev';
+const TARGET = 'https://d1-report.vercel.app';
 
 mkdirSync('out', { recursive: true });
 writeFileSync('out/_redirects', `/* ${TARGET}/:splat 301\n`);
