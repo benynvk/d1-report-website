@@ -446,7 +446,7 @@ export function ImportReportModal({
         </div>
 
         {!memberId ? (
-          <div className="empty sm">Chọn profile của bạn</div>
+          <div className="empty sm">Select your profile</div>
         ) : loading ? (
           <Loading />
         ) : fullDayOff ? (
