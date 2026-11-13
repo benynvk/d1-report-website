@@ -554,7 +554,7 @@ export function ImportReportModal({
             <div className="task-rows">
               <div className="task-row task-row-head">
                 <span>Task</span>
-                <span>What you did</span>
+                <span>Detail</span>
                 <span className="c">Hours</span>
                 <span className="c" title="Not finished on this day">
                   In progress
