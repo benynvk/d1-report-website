@@ -24,6 +24,17 @@ function extractTaskId(url: string | null): string | null {
   return /\/tasks\/(\d+)/.exec(url)?.[1] ?? null;
 }
 
+/**
+ * The canonical ".../app/tasks/<id>" URL for a link to a Teamwork task on our
+ * domain — including the older "/#/tasks/<id>" form — or the input unchanged
+ * for anything else.
+ */
+export function canonicalTaskUrl(url: string | null): string | null {
+  if (!url?.startsWith(base())) return url;
+  const id = /^\/?(?:#\/|app\/)?tasks\/(\d+)(?:[/?#]|$)/.exec(url.slice(base().length).replace(/^\//, ''))?.[1];
+  return id ? `${base()}/app/tasks/${id}` : url;
+}
+
 /** The official task name for a Teamwork task URL, or null. */
 export async function resolveTitle(url: string | null): Promise<string | null> {
   if (!config.teamworkToken) return null;

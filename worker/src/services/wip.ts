@@ -487,7 +487,8 @@ export async function writeEntry(
   const rich = await Promise.all(
     lines.map(async (line): Promise<RichLine> => {
       if (/^https?:\/\/\S+$/i.test(line)) {
-        return { display: (await teamwork.resolveTitle(line)) ?? line, url: line };
+        const url = teamwork.canonicalTaskUrl(line)!;
+        return { display: (await teamwork.resolveTitle(url)) ?? url, url };
       }
       return { display: line };
     }),

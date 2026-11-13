@@ -166,7 +166,10 @@ export async function upsert(input: {
   entries?: UpsertEntry[];
 }): Promise<DailyReport> {
   if (!isIsoDate(input.date)) throw badRequest(`Invalid date: ${input.date}`);
-  const entries: UpsertEntry[] = input.entries ?? parseReport(input.rawText).entries;
+  const entries: UpsertEntry[] = (input.entries ?? parseReport(input.rawText).entries).map((e) => ({
+    ...e,
+    href: teamwork.canonicalTaskUrl(e.href),
+  }));
   if (entries.length === 0) throw badRequest('No task lines detected');
 
   const types = await taskTypes.findAll();

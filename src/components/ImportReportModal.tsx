@@ -52,11 +52,26 @@ function isRowTouched(r: RowState): boolean {
   return !!r.link.trim() || !!r.otherTask.trim() || !!r.note.trim() || !!r.hours.trim();
 }
 
-/** A Teamwork link must be on the configured domain and look like an
- * actual task link (".../app/tasks/<id>"), not just any URL. */
+/**
+ * The canonical task URL (".../app/tasks/<id>") for a Teamwork task link, or
+ * null if it isn't one. Must be on the configured domain; accepts the current
+ * "/app/tasks/<id>" form as well as the older "/#/tasks/<id>" and bare
+ * "/tasks/<id>" ones (with or without a trailing path or query).
+ */
+function canonicalTeamworkLink(link: string, taskUrlPrefix?: string): string | null {
+  if (!taskUrlPrefix || !link.startsWith(taskUrlPrefix)) return null;
+  const id = /^\/?(?:#\/|app\/)?tasks\/(\d+)(?:[/?#]|$)/.exec(link.slice(taskUrlPrefix.length).replace(/^\//, ''))?.[1];
+  return id ? `${taskUrlPrefix.replace(/\/$/, '')}/app/tasks/${id}` : null;
+}
+
 function isValidTeamworkLink(link: string, taskUrlPrefix?: string): boolean {
-  if (!taskUrlPrefix || !link.startsWith(taskUrlPrefix)) return false;
-  return /\/app\/tasks\/\d+/.test(link);
+  return canonicalTeamworkLink(link, taskUrlPrefix) !== null;
+}
+
+/** The link to save/send: canonical when it's a Teamwork task, else as typed. */
+function linkOf(r: RowState, taskUrlPrefix?: string): string {
+  const link = r.link.trim();
+  return canonicalTeamworkLink(link, taskUrlPrefix) ?? link;
 }
 
 /** Hours are optional: a report filed at the start of the day lists what the
@@ -78,8 +93,8 @@ function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
  * Blank hours go out as 0: the parser only recognises a task line by its
  * trailing number, and 0 is how "no hours yet" is stored (the column is
  * NOT NULL), which reads back as an empty input. */
-function rowToLine(r: RowState): string {
-  const base = r.type === 'teamwork' ? r.link.trim() : r.otherTask.trim();
+function rowToLine(r: RowState, taskUrlPrefix?: string): string {
+  const base = r.type === 'teamwork' ? linkOf(r, taskUrlPrefix) : r.otherTask.trim();
   const label = r.note.trim() ? `${base} - ${r.note.trim()}` : base;
   return `${label}: ${r.hours.trim() || '0'}`;
 }
@@ -87,11 +102,11 @@ function rowToLine(r: RowState): string {
 /** The row as the API stores it. Mirrors what the text parser would have
  * produced (link + note for Teamwork tasks, "<task> - <note>" otherwise) and
  * adds the in-progress flag, which the text format can't express. */
-function rowToEntry(r: RowState) {
+function rowToEntry(r: RowState, taskUrlPrefix?: string) {
   const hours = parseFloat(r.hours) || 0;
   const note = r.note.trim();
   if (r.type === 'teamwork') {
-    return { href: r.link.trim(), taskName: note, hours, inProgress: r.inProgress };
+    return { href: linkOf(r, taskUrlPrefix), taskName: note, hours, inProgress: r.inProgress };
   }
   const task = r.otherTask.trim();
   return {
@@ -340,12 +355,12 @@ export function ImportReportModal({
       if (fullDayOff) {
         setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
       } else if (validRows.length > 0) {
-        const text = validRows.map(rowToLine).join('\n');
+        const text = validRows.map((r) => rowToLine(r, config?.taskUrlPrefix)).join('\n');
         const report = await api.importReport({
           memberId,
           date,
           text,
-          entries: validRows.map(rowToEntry),
+          entries: validRows.map((r) => rowToEntry(r, config?.taskUrlPrefix)),
         });
         const total = report.entries.reduce((s, e) => s + e.hours, 0);
         setOk(
