@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { Loading } from '@/components/Spinner';
 import { Select } from '@/components/Select';
 import { LOGO_URL } from '@/lib/brand';
-import { taskLabel } from '@/lib/format';
+import { reportLabel } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 /** One colour per person, reused by the donut, the daily chart and the table. */
@@ -180,7 +180,7 @@ export default function MonthlyReportPage() {
     const rowsByKey = new Map<string, TaskRow>();
     for (const r of reports) {
       for (const e of r.entries) {
-        const label = taskLabel(e);
+        const label = reportLabel(e);
         // Group by name, not by link: the same task shows up both as a
         // Teamwork link and as a typed-in row, and they belong on one line.
         const key = label.trim().toLowerCase();

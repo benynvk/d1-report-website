@@ -2510,3 +2510,21 @@ label {
   max-height: none;
   overflow: visible;
 }
+
+/* Task-type suggestions in the report form: the app's dropdown, keyboard-highlighted. */
+.input-wrap .select-menu {
+  min-width: 220px;
+}
+.select-opt.active {
+  background: var(--bg);
+}
+.cal-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.cal-foot .link-btn {
+  font-size: 13px;
+}

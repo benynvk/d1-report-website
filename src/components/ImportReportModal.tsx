@@ -321,6 +321,42 @@ export function ImportReportModal({
     }
   };
 
+  // ---------- Task-type suggestions (styled like the app's dropdowns) ----------
+  const [suggest, setSuggest] = useState<{ key: string; index: number } | null>(null);
+  const suggestionsFor = (r: RowState) => {
+    const q = r.text.trim().toLowerCase();
+    const all = config?.noUrlAllowedTasks ?? [];
+    if (all.some((t) => t.toLowerCase() === q)) return []; // already a type
+    return all.filter((t) => t.toLowerCase().includes(q));
+  };
+  const menuOpen = (r: RowState) => suggest?.key === r.key && !isLink(r.text) && suggestionsFor(r).length > 0;
+  const chooseType = (key: string, type: string) => {
+    updateRow(key, { text: type, previewTitle: undefined });
+    setSuggest(null);
+  };
+  const onTaskKey = (r: RowState, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (menuOpen(r) && suggest) {
+      const list = suggestionsFor(r);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setSuggest({ key: r.key, index: (suggest.index + step + list.length) % list.length });
+        return;
+      }
+      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        chooseType(r.key, list[Math.min(suggest.index, list.length - 1)]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.stopPropagation(); // close the menu, not the form
+        setSuggest(null);
+        return;
+      }
+    }
+    onRowKey(r, e);
+  };
+
   // ---------- Derived ----------
   const filled = rows.filter((r) => !isBlank(r));
   const errors = new Map(filled.map((r) => [r.key, rowError(r, config)]));
@@ -453,12 +489,6 @@ export function ImportReportModal({
           <div className="empty sm">Full day off - no tasks needed.</div>
         ) : (
           <>
-            <datalist id="task-types">
-              {(config?.noUrlAllowedTasks ?? []).map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
-
             <div className="task-rows">
               <div className="task-row task-row-head">
                 <span>Task</span>
@@ -498,14 +528,43 @@ export function ImportReportModal({
                           <input
                             data-row={r.key}
                             value={r.text}
-                            list={link ? undefined : 'task-types'}
-                            onChange={(e) => updateRow(r.key, { text: e.target.value, previewTitle: undefined })}
-                            onBlur={(e) => resolvePreview(r.key, e.target.value)}
+                            role="combobox"
+                            aria-expanded={menuOpen(r)}
+                            aria-autocomplete="list"
+                            onFocus={() => setSuggest({ key: r.key, index: 0 })}
+                            onChange={(e) => {
+                              updateRow(r.key, { text: e.target.value, previewTitle: undefined });
+                              setSuggest({ key: r.key, index: 0 });
+                            }}
+                            onBlur={(e) => {
+                              setSuggest(null);
+                              resolvePreview(r.key, e.target.value);
+                            }}
                             onPaste={(e) => onPasteTask(r, e)}
-                            onKeyDown={(e) => onRowKey(r, e)}
+                            onKeyDown={(e) => onTaskKey(r, e)}
                             placeholder="Paste a Teamwork link, or pick a task type"
                           />
                           {r.previewLoading && <Spinner sm />}
+                          {menuOpen(r) && (
+                            <div className="select-menu" role="listbox">
+                              {suggestionsFor(r).map((t, i) => (
+                                <div
+                                  key={t}
+                                  role="option"
+                                  aria-selected={i === suggest?.index}
+                                  className={`select-opt${i === suggest?.index ? ' active' : ''}`}
+                                  // mousedown, not click: keeps focus so blur doesn't close the menu first
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    chooseType(r.key, t);
+                                  }}
+                                  onMouseEnter={() => setSuggest({ key: r.key, index: i })}
+                                >
+                                  {t}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                       {err && <div className="row-error">{err}</div>}

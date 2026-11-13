@@ -5,12 +5,23 @@ import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useConfirm } from '@/components/Confirm';
 import { Loading, Spinner } from '@/components/Spinner';
+import { Select } from '@/components/Select';
 import { CloseIcon, ExternalIcon } from '@/components/icons';
 import { monthLabel } from '@/lib/format';
 import type { TaskType, WipConfig, WipStatus } from '@/lib/types';
 
 function currentMonth(): string {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 7);
+}
+
+/** Two months ahead down to a year back, newest first. */
+function monthOptions() {
+  const [y, m] = currentMonth().split('-').map(Number);
+  return Array.from({ length: 15 }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - 1 + 2 - i, 1));
+    const value = d.toISOString().slice(0, 7);
+    return { value, label: monthLabel(value) };
+  });
 }
 
 export default function SettingsPage() {
@@ -172,7 +183,9 @@ function MonthSheets({ onError }: { onError: (m: string) => void }) {
   return (
     <Section title="WIP sheet per month" sub="A new WIP spreadsheet is created every month - add its link here.">
       <div className="inline-form">
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={{ width: 170 }} />
+        <div style={{ width: 180 }}>
+          <Select value={month} onChange={(v) => v && setMonth(v)} placeholder="" options={monthOptions()} />
+        </div>
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}

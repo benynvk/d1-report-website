@@ -649,7 +649,13 @@ export async function syncReport(
 
   const column = wipColumnFor(report.date);
   const lines: RichLine[] = tasks.map((e) => ({
-    display: e.resolvedTitle?.trim() || e.taskName?.trim() || e.href?.trim() || 'Task',
+    // An "Other" task shows just its note: "Other - Check DNS records" -> "Check DNS records".
+    display:
+      e.resolvedTitle?.trim() ||
+      (e.href ? '' : e.taskName?.trim().replace(/^other\s+-\s+/i, '')) ||
+      e.taskName?.trim() ||
+      e.href?.trim() ||
+      'Task',
     url: e.href,
     prefix: tasks.length > 1 ? '- ' : undefined, // a lone task reads better unbulleted
     suffix:
