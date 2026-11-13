@@ -20,8 +20,8 @@ function normalizeChatUserId(raw?: string | null): string | null {
 /**
  * Avatars are stored as base64 data URLs but never travel inside JSON: a
  * member's `avatarUrl` is the URL of GET /api/members/:id/avatar, which the
- * browser caches. `?v=` changes when the image does. Shipping the images in
- * every list was what pushed requests past the Workers CPU limit.
+ * browser caches. `?v=` changes when the image does — far lighter than
+ * shipping base64 images inside every list.
  */
 const { avatarUrl: _stored, ...plainColumns } = getTableColumns(members);
 const memberColumns = {
@@ -64,11 +64,11 @@ export async function findByEmail(email: string): Promise<Member | null> {
 }
 
 /** The stored avatar as image bytes, or null when the member has none. */
-export async function avatarImage(id: string): Promise<{ type: string; bytes: Uint8Array } | null> {
+export async function avatarImage(id: string): Promise<{ type: string; bytes: ArrayBuffer } | null> {
   const [row] = await db().select({ avatarUrl: members.avatarUrl }).from(members).where(eq(members.id, id));
   const match = /^data:(image\/[\w.+-]+);base64,(.+)$/s.exec(row?.avatarUrl ?? '');
   if (!match) return null;
-  return { type: match[1], bytes: Uint8Array.from(atob(match[2]), (ch) => ch.charCodeAt(0)) };
+  return { type: match[1], bytes: Uint8Array.from(atob(match[2]), (ch) => ch.charCodeAt(0)).buffer };
 }
 
 /**

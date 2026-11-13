@@ -5,8 +5,7 @@ import * as schema from './schema';
 
 /**
  * Neon over HTTP: every query is one fetch, so there is no connection to
- * open or pool, and far less CPU than a wire-protocol driver — which is what
- * keeps this inside the Workers free plan's 10 ms CPU budget.
+ * open or pool — a good fit for serverless functions that come and go.
  *
  * Trade-off: no interactive transactions. Use `db().batch([...])` for
  * statements that must commit together.

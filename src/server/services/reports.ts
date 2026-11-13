@@ -65,8 +65,8 @@ const ISO = sql.raw(`'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`);
  * Reports matching `where` (written against aliases r = daily_reports,
  * m = members), newest first, as one JSON array string built by Postgres.
  *
- * The list endpoint hands that string straight to the client, so the Worker
- * never materialises the rows — CPU stays flat however long the range is.
+ * The list endpoint hands that string straight to the client, so the server
+ * never materialises the rows — cheap however long the range is.
  */
 async function loadJson(where: SQL): Promise<string> {
   const result = await db().execute(sql`

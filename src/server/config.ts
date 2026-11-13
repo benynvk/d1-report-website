@@ -1,19 +1,9 @@
 /**
- * Worker settings, read from the bindings (vars + secrets) of the current
- * invocation. Only DATABASE_URL is required — everything else has a default
- * that matches the D1 Training setup.
+ * Server settings, from environment variables (Vercel project settings in
+ * production, .env.local in development). Only DATABASE_URL is required —
+ * everything else has a default that matches the D1 Training setup.
  */
-let bindings: Record<string, unknown> = {};
-
-/** Called at the start of every fetch/scheduled invocation. */
-export function bindEnv(env: object): void {
-  bindings = env as Record<string, unknown>;
-}
-
-const env = (key: string, fallback = ''): string => {
-  const value = bindings[key];
-  return (typeof value === 'string' && value.trim()) || fallback;
-};
+const env = (key: string, fallback = ''): string => process.env[key]?.trim() || fallback;
 
 export const config = {
   get databaseUrl() {

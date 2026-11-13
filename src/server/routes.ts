@@ -1,4 +1,5 @@
-import { Hono } from 'hono';
+import { waitUntil } from '@vercel/functions';
+import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { config } from './config';
@@ -19,7 +20,7 @@ import * as wip from './services/wip';
 /** The HTTP API, mounted under /api. Handlers stay thin — logic lives in services/. */
 export const api = new Hono().basePath('/api');
 
-// Same-origin in production; this only matters for `next dev` talking to `wrangler dev`.
+// The site calls the API same-origin; CORS only helps tools hitting it from elsewhere.
 api.use('*', cors());
 api.onError((err, c) => toErrorResponse(err, `${c.req.method} ${c.req.path}`));
 api.notFound((c) => toErrorResponse(notFound(`Cannot ${c.req.method} ${c.req.path}`), ''));
@@ -185,7 +186,7 @@ api.get('/stats/summary', async (c) => send(await stats.summary(query(c, 'from')
 api.post('/webhooks/google-chat', async (c) => {
   await chatWebhook.verify(c.req.header('authorization'));
   const event = await c.req.json().catch(() => ({}));
-  const reply = await chatWebhook.handleEvent(event, (p) => c.executionCtx.waitUntil(p));
+  const reply = await chatWebhook.handleEvent(event, waitUntil);
   // A returned message is posted back into the thread by Chat.
   return send(reply ?? {});
 });
@@ -196,7 +197,7 @@ api.get('/wip/status', async () => send(await wip.status()));
 api.get('/wip/oauth/start', (c) => c.redirect(wip.getAuthUrl(new URL(c.req.url).origin)));
 api.get('/wip/oauth/callback', async (c) => {
   const origin = new URL(c.req.url).origin;
-  const back = (params: string) => c.redirect(`${origin}/wip/?${params}`);
+  const back = (params: string) => c.redirect(`${origin}/wip?${params}`);
   const code = query(c, 'code');
   const error = query(c, 'error');
   if (error || !code) return back(`error=${encodeURIComponent(error ?? 'missing_code')}`);
@@ -230,14 +231,24 @@ api.get('/wip/auto-plan', async (c) =>
 /** The "Check WIP" button: runs the morning reminder now. */
 api.post('/wip/check-reminder', async (c) => send(await jobs['wip-reminder'](query(c, 'date'))));
 
-// ---------- Manual run of a scheduled job ----------
+// ---------- Scheduled jobs ----------
 
-api.post('/cron/:job', (c) => {
-  const name = c.req.param('job');
+/**
+ * Runs a scheduled job — called by the external scheduler (cron-job.org, see
+ * README) at fixed times; also usable by hand. GET or POST. Responds 202 at
+ * once and finishes the job in the background (waitUntil), so a scheduler's
+ * short timeout doesn't cut it off.
+ */
+const runJob = (c: Context) => {
+  const name = c.req.param('job') ?? '';
   if (!(name in jobs)) throw notFound(`Unknown job: ${name}`);
-  // Jobs can outlast a caller's timeout — acknowledge, then run.
-  c.executionCtx.waitUntil(
-    jobs[name as JobName]().catch((err) => console.error(`Job ${name} failed:`, err)),
+  if (!config.remindersEnabled) return c.json({ skipped: name, reason: 'REMINDER_ENABLED=false' });
+  waitUntil(
+    jobs[name as JobName]()
+      .then((result) => console.log(`Job ${name} done: ${JSON.stringify(result)}`))
+      .catch((err) => console.error(`Job ${name} failed:`, err)),
   );
   return c.json({ accepted: name }, 202);
-});
+};
+api.get('/cron/:job', runJob);
+api.post('/cron/:job', runJob);

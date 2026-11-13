@@ -225,8 +225,7 @@ type DayLocation = { spreadsheetId: string; titles: string[]; tab: Tab | null };
 /**
  * One unit of sheet work (a request, a cron job): reuses the access token,
  * month configs, tab lists and tab values instead of re-fetching them for
- * every member — which keeps a whole-team job well inside the Workers limit
- * of 50 outbound requests per invocation. Writes made through it update the
+ * every member — a whole-team job makes about ten outbound requests. Writes made through it update the
  * cached values, so later reads in the same session see them.
  */
 export class SheetSession {

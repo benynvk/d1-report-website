@@ -55,7 +55,7 @@ interface NormalizedEvent {
   message?: ChatMessage;
 }
 
-/** Runs work after the response is sent (the Worker's `waitUntil`). */
+/** Runs work after the response is sent (Vercel's `waitUntil`). */
 export type Defer = (promise: Promise<unknown>) => void;
 
 function normalizeEvent(raw: ChatEvent): NormalizedEvent {

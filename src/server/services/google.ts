@@ -3,8 +3,8 @@ import { config } from '../config';
 import { badRequest } from '../http';
 
 /**
- * The few Google auth calls the app needs, over plain fetch + WebCrypto
- * (google-auth-library depends on Node APIs Workers don't have).
+ * The few Google auth calls the app needs, over plain fetch + WebCrypto —
+ * small and dependency-light (no google-auth-library).
  */
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';

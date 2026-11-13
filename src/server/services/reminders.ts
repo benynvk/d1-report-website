@@ -8,8 +8,9 @@ import * as members from './members';
 import * as wip from './wip';
 
 /**
- * Scheduled jobs, run by the Worker's Cron Triggers (see worker/index.ts);
- * also reachable at POST /api/cron/<job> for a manual run.
+ * Scheduled jobs, run by an external scheduler calling /api/cron/<job> at
+ * fixed times (see README) — Vercel's own cron on the Hobby plan is
+ * once-a-day and not minute-accurate.
  */
 
 /** membersMissingEntry, but [] (with a warning) on error. */
