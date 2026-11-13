@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { DateField } from './DateField';
 import { Loading } from './Spinner';
-import { formatDate, progressLabel, reportLabel } from '@/lib/format';
+import { formatDate, progressLabel, reportLabel, taskNote } from '@/lib/format';
 import type { DailyReport, Member } from '@/lib/types';
 
 function today(): string {
@@ -90,12 +90,13 @@ function buildSummary(
         const status = e.href
           ? ` => ${e.inProgress ? progressLabel(e) : 'Done'}`
           : '';
-        lines.push(`- ${reportLabel(e)}${hours}${status}`);
+        const note = taskNote(e) ? `: ${taskNote(e)}` : '';
+        lines.push(`- ${reportLabel(e)}${note}${hours}${status}`);
       }
     }
     if (slot.today) {
       lines.push('Today:');
-      for (const e of slot.today.entries) lines.push(`- ${reportLabel(e)}`);
+      for (const e of slot.today.entries) lines.push(`- ${reportLabel(e)}${taskNote(e) ? `: ${taskNote(e)}` : ''}`);
     }
     blocks.push(lines.join('\n'));
   }

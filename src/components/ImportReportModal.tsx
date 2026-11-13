@@ -554,7 +554,7 @@ export function ImportReportModal({
             <div className="task-rows">
               <div className="task-row task-row-head">
                 <span>Task</span>
-                <span>Note</span>
+                <span>What you did</span>
                 <span className="c">Hours</span>
                 <span className="c" title="Not finished on this day">
                   In progress
@@ -636,7 +636,7 @@ export function ImportReportModal({
                       value={r.note}
                       onChange={(e) => updateRow(r.key, { note: e.target.value })}
                       onKeyDown={(e) => onRowKey(r, e)}
-                      placeholder="Optional note"
+                      placeholder="e.g. finished login API, writing tests"
                     />
                     <input
                       type="number"

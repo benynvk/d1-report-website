@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { formatDate, formatHours, progressLabel, taskLabel } from '@/lib/format';
+import { formatDate, formatHours, progressLabel, taskLabel, taskNote } from '@/lib/format';
 import type { DailyReport } from '@/lib/types';
 import { Avatar } from './Avatar';
 import { Loading } from './Spinner';
@@ -101,6 +101,7 @@ export function MemberDetail({
                         ) : (
                           taskLabel(e)
                         )}
+                        {taskNote(e) && <span className="task-note">: {taskNote(e)}</span>}
                       </span>
                       {e.inProgress && <span className="wip-chip">{progressLabel(e)}</span>}
                       <span className="hours-pill">{formatHours(e.hours)}</span>

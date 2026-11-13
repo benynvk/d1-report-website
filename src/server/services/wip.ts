@@ -648,6 +648,10 @@ export async function syncReport(
   if (tasks.length === 0) return { updated: false, skipped: 'the report has no tasks' };
 
   const column = wipColumnFor(report.date);
+  // A linked task's note ("finished login API, writing tests") is what was
+  // actually done — it goes right after the title.
+  const noteOf = (e: ReportEntry) =>
+    e.href && e.resolvedTitle?.trim() ? (e.taskName ?? '').trim().replace(/^[-–]\s*/, '') : '';
   const lines: RichLine[] = tasks.map((e) => ({
     // An "Other" task shows just its note: "Other - Check DNS records" -> "Check DNS records".
     display:
@@ -659,13 +663,14 @@ export async function syncReport(
     url: e.href,
     prefix: tasks.length > 1 ? '- ' : undefined, // a lone task reads better unbulleted
     suffix:
-      column === 'evening'
+      (noteOf(e) ? `: ${noteOf(e)}` : '') +
+      (column === 'evening'
         ? `${e.hours ? ` (${Math.round(e.hours * 100) / 100}h)` : ''}` +
           // Only Teamwork tasks get a status — a meeting is nothing you finish.
           (e.href
             ? ` => ${e.inProgress ? `In progress${e.progress != null ? ` (${e.progress}%)` : ''}` : 'Done'}`
             : '')
-        : undefined,
+        : ''),
   }));
 
   try {

@@ -12,6 +12,15 @@ export function taskLabel(e: {
   return e.href ? label : label.replace(/^other\s+-\s+/i, '') || label;
 }
 
+/**
+ * What was done on a linked task that day (its note), e.g. "finished login
+ * API, writing tests" — '' when none. A no-link task's note is already part
+ * of its label.
+ */
+export function taskNote(e: { resolvedTitle?: string | null; taskName?: string | null; href?: string | null }): string {
+  return e.href && e.resolvedTitle?.trim() ? (e.taskName ?? '').trim().replace(/^[-–]\s*/, '') : '';
+}
+
 /** "In progress" / "In progress (40%)" for a task left unfinished. */
 export function progressLabel(e: { progress?: number | null }): string {
   return e.progress != null ? `In progress (${e.progress}%)` : 'In progress';
