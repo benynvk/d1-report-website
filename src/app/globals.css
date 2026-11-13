@@ -2528,3 +2528,16 @@ label {
 .cal-foot .link-btn {
   font-size: 13px;
 }
+/* "+ Task" while a row is still empty: highlight and shake that row instead of adding another. */
+.task-row.nudge {
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+}
+.task-row.nudge .input-wrap input {
+  border-color: var(--amber);
+  animation: nudge 0.35s ease;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

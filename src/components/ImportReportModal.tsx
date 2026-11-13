@@ -61,6 +61,9 @@ function canonicalTeamworkLink(link: string, prefix?: string): string | null {
 const taskTypeOf = (text: string, allowed: string[]) =>
   allowed.find((t) => t.toLowerCase() === text.trim().toLowerCase()) ?? null;
 
+/** The "Other" task type, under which free-text tasks are saved (null if not configured). */
+const otherTypeOf = (allowed: string[]) => allowed.find((t) => t.toLowerCase() === 'other') ?? null;
+
 /** Why a row can't be saved, or null when it's fine (or still blank). */
 function rowError(r: RowState, config: ReportConfig | null): string | null {
   if (isBlank(r)) return null;
@@ -69,12 +72,13 @@ function rowError(r: RowState, config: ReportConfig | null): string | null {
     if (Number.isNaN(h) || h <= 0) return 'Hours must be a positive number.';
   }
   const text = r.text.trim();
-  if (!text) return 'Paste a Teamwork task link or pick a task type.';
+  if (!text) return 'Paste a Teamwork link, pick a task type, or describe the task.';
   if (isLink(text)) {
     return canonicalTeamworkLink(text, config?.taskUrlPrefix) ? null : 'Not a Teamwork task link (…/app/tasks/123).';
   }
-  if (!config) return null;
-  return taskTypeOf(text, config.noUrlAllowedTasks)
+  if (!config || taskTypeOf(text, config.noUrlAllowedTasks)) return null;
+  // Free text is saved as an "Other" task — only possible if that type exists.
+  return otherTypeOf(config.noUrlAllowedTasks)
     ? null
     : `"${text}" needs a Teamwork link - or pick a task type: ${config.noUrlAllowedTasks.join(', ')}.`;
 }
@@ -87,8 +91,11 @@ function rowToEntry(r: RowState, config: ReportConfig | null) {
   if (isLink(text)) {
     return { href: canonicalTeamworkLink(text, config?.taskUrlPrefix) ?? text, taskName: note, hours, inProgress: r.inProgress };
   }
-  const type = taskTypeOf(text, config?.noUrlAllowedTasks ?? []) ?? text;
-  return { taskName: note ? `${type} - ${note}` : type, hours, inProgress: r.inProgress };
+  const allowed = config?.noUrlAllowedTasks ?? [];
+  const type = taskTypeOf(text, allowed);
+  // A known type keeps "<type> - <note>"; free text becomes "Other - <text>".
+  const name = type ?? `${otherTypeOf(allowed) ?? 'Other'} - ${text}`;
+  return { taskName: note ? `${name} - ${note}` : name, hours, inProgress: r.inProgress };
 }
 
 /** The human-readable record kept as the report's raw text. */
@@ -109,9 +116,12 @@ function rowsFromReport(report: DailyReport, allowed: string[], keepHours: boole
       });
     }
     const type = allowed.find((t) => e.taskName === t || e.taskName.startsWith(`${t} - `));
+    const rest = type && e.taskName !== type ? e.taskName.slice(type.length + 3) : '';
+    // "Other - Check DNS records" reads back as the free text "Check DNS records".
+    const asFreeText = !!rest && type?.toLowerCase() === 'other';
     return makeRow({
-      text: type ?? e.taskName,
-      note: type && e.taskName !== type ? e.taskName.slice(type.length + 3) : '',
+      text: asFreeText ? rest : (type ?? e.taskName),
+      note: asFreeText ? '' : rest,
       hours,
       inProgress: keepHours ? e.inProgress : false,
     });
@@ -177,6 +187,9 @@ export function ImportReportModal({
   const [boardLoading, setBoardLoading] = useState(false);
   const [copying, setCopying] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const boardBtnRef = useRef<HTMLButtonElement>(null);
+  const pressedBackdrop = useRef(false);
 
   useEffect(() => {
     api.listMembers().then(setMembers).catch((e) => setError(e.message));
@@ -214,7 +227,7 @@ export function ImportReportModal({
         setLeaveHours(leave ? (leave.hours ?? 8) : null);
         const report = reports[0];
         setExisting(!!report?.entries.length);
-        setRows(report?.entries.length ? [...rowsFromReport(report, config?.noUrlAllowedTasks ?? [], true), makeRow()] : [makeRow()]);
+        setRows(report?.entries.length ? rowsFromReport(report, config?.noUrlAllowedTasks ?? [], true) : [makeRow()]);
       })
       .catch(() => !cancelled && setRows([makeRow()]))
       .finally(() => !cancelled && setLoading(false));
@@ -231,13 +244,31 @@ export function ImportReportModal({
       return next.length ? next : [makeRow()];
     });
 
-  /** Puts new rows in place of trailing blank ones, keeping one spare at the end. */
+  /** Adds filled rows (From Teamwork, Copy previous day); they take the place of blank rows. */
   const addRows = (added: RowState[]) =>
     setRows((rs) => {
-      let end = rs.length;
-      while (end > 0 && isBlank(rs[end - 1])) end--;
-      return [...rs.slice(0, end), ...added, makeRow()];
+      const next = [...rs.filter((r) => !isBlank(r)), ...added];
+      return next.length ? next : [makeRow()];
     });
+
+  /** A blank row the user is nudged back to instead of getting another one. */
+  const [nudge, setNudge] = useState<string | null>(null);
+  const nudgeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const nudgeTo = (key: string) => {
+    setNudge(key);
+    focusRow(key);
+    clearTimeout(nudgeTimer.current);
+    nudgeTimer.current = setTimeout(() => setNudge(null), 2000);
+  };
+
+  /** "+ Task" / Enter on the last row: one empty row at a time. */
+  const addTask = () => {
+    const blank = rows.find(isBlank);
+    if (blank) return nudgeTo(blank.key);
+    const fresh = makeRow();
+    setRows((rs) => [...rs, fresh]);
+    focusRow(fresh.key);
+  };
 
   const resolvePreview = async (key: string, text: string) => {
     if (!isLink(text)) return;
@@ -265,7 +296,7 @@ export function ImportReportModal({
       const head = rs.slice(0, i);
       const tail = rs.slice(i + 1).filter((x) => !isBlank(x));
       const first = { ...created[0], key: r.key, note: r.note, hours: r.hours, inProgress: r.inProgress };
-      return [...head, first, ...created.slice(1), ...tail, makeRow()];
+      return [...head, first, ...created.slice(1), ...tail];
     });
     [{ ...created[0], key: r.key }, ...created.slice(1)].forEach((x) => resolvePreview(x.key, x.text));
   };
@@ -273,18 +304,13 @@ export function ImportReportModal({
   const focusRow = (key: string) =>
     requestAnimationFrame(() => formRef.current?.querySelector<HTMLInputElement>(`[data-row="${key}"]`)?.focus());
 
-  /** Enter on the last row adds a row and moves to it. */
+  /** Enter moves to the next row; on the last row it adds one (same rule as "+ Task"). */
   const onRowKey = (r: RowState, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.metaKey || e.ctrlKey) return;
     e.preventDefault();
-    const last = rows[rows.length - 1];
-    if (last.key === r.key) {
-      const fresh = makeRow();
-      setRows((rs) => [...rs, fresh]);
-      focusRow(fresh.key);
-    } else {
-      focusRow(rows[rows.findIndex((x) => x.key === r.key) + 1].key);
-    }
+    const i = rows.findIndex((x) => x.key === r.key);
+    if (i === rows.length - 1) addTask();
+    else focusRow(rows[i + 1].key);
   };
 
   const toggleBoard = async () => {
@@ -301,6 +327,26 @@ export function ImportReportModal({
       setBoardLoading(false);
     }
   };
+
+  // The Teamwork list closes on a click outside it (or Esc), like a dropdown.
+  useEffect(() => {
+    if (!boardOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!boardRef.current?.contains(t) && !boardBtnRef.current?.contains(t)) setBoardOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopImmediatePropagation(); // close the list, not the form
+      setBoardOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [boardOpen]);
 
   const copyPrevious = async () => {
     setError('');
@@ -427,8 +473,14 @@ export function ImportReportModal({
   }, [onClose, submit]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-xl report-form" onClick={(e) => e.stopPropagation()} ref={formRef}>
+    <div
+      className="modal-overlay"
+      // Close only when the press also started on the backdrop: the form can
+      // shrink under the pointer mid-click (e.g. the Teamwork list closing).
+      onMouseDown={(e) => (pressedBackdrop.current = e.target === e.currentTarget)}
+      onClick={(e) => pressedBackdrop.current && e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal modal-xl report-form" ref={formRef}>
         <div className="report-form-head">
           <div>
             <h3>{existing ? 'Edit report' : 'Add report'}</h3>
@@ -503,7 +555,7 @@ export function ImportReportModal({
                 const err = errors.get(r.key);
                 const link = isLink(r.text);
                 return (
-                  <div key={r.key} className={`task-row${err ? ' has-error' : ''}`}>
+                  <div key={r.key} className={`task-row${err ? ' has-error' : ''}${nudge === r.key ? ' nudge' : ''}`}>
                     <div className="task-cell">
                       {link && r.previewTitle ? (
                         <div className="link-preview">
@@ -531,7 +583,8 @@ export function ImportReportModal({
                             role="combobox"
                             aria-expanded={menuOpen(r)}
                             aria-autocomplete="list"
-                            onFocus={() => setSuggest({ key: r.key, index: 0 })}
+                            // Not while nudging: the menu would cover the highlighted row.
+                            onFocus={() => nudge !== r.key && setSuggest({ key: r.key, index: 0 })}
                             onChange={(e) => {
                               updateRow(r.key, { text: e.target.value, previewTitle: undefined });
                               setSuggest({ key: r.key, index: 0 });
@@ -542,7 +595,7 @@ export function ImportReportModal({
                             }}
                             onPaste={(e) => onPasteTask(r, e)}
                             onKeyDown={(e) => onTaskKey(r, e)}
-                            placeholder="Paste a Teamwork link, or pick a task type"
+                            placeholder="Paste a Teamwork link, or type a task"
                           />
                           {r.previewLoading && <Spinner sm />}
                           {menuOpen(r) && (
@@ -608,10 +661,10 @@ export function ImportReportModal({
             </div>
 
             <div className="task-tools">
-              <button className="btn ghost sm" onClick={() => addRows([makeRow()])}>
+              <button className="btn ghost sm" onClick={addTask}>
                 + Task
               </button>
-              <button className={`btn ghost sm${boardOpen ? ' on' : ''}`} onClick={toggleBoard}>
+              <button ref={boardBtnRef} className={`btn ghost sm${boardOpen ? ' on' : ''}`} onClick={toggleBoard}>
                 From Teamwork
               </button>
               <button className="btn ghost sm" onClick={copyPrevious} disabled={copying}>
@@ -620,7 +673,7 @@ export function ImportReportModal({
             </div>
 
             {boardOpen && (
-              <div className="board-picker">
+              <div className="board-picker" ref={boardRef}>
                 {boardLoading ? (
                   <Loading />
                 ) : !board?.length ? (

@@ -1,24 +1,19 @@
-/** Display name for a task entry: official Teamwork title > typed name > fallback. */
+/**
+ * Display name for a task entry: official Teamwork title > typed name >
+ * fallback. An "Other" task shows just its description everywhere —
+ * "Other - Check DNS records" -> "Check DNS records".
+ */
 export function taskLabel(e: {
   resolvedTitle?: string | null;
   taskName?: string | null;
   href?: string | null;
 }): string {
-  return e.resolvedTitle?.trim() || e.taskName?.trim() || 'Task';
-}
-
-/**
- * Task name for generated reports (WIP summary, monthly report): an "Other"
- * task shows just its note — "Other - Check DNS records" -> "Check DNS records".
- */
-export function reportLabel(e: {
-  resolvedTitle?: string | null;
-  taskName?: string | null;
-  href?: string | null;
-}): string {
-  const label = taskLabel(e);
+  const label = e.resolvedTitle?.trim() || e.taskName?.trim() || 'Task';
   return e.href ? label : label.replace(/^other\s+-\s+/i, '') || label;
 }
+
+/** Task name in generated reports (WIP summary, monthly report) — same as taskLabel. */
+export const reportLabel = taskLabel;
 
 /**
  * Task/day hours for display, rounded to 2 decimals. Hours are optional when
