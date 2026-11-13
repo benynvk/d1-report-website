@@ -2607,3 +2607,19 @@ label {
   font-variant-numeric: tabular-nums;
   padding-top: 1px;
 }
+
+/* Report form: Hours and In progress centered under their headers. */
+.task-row {
+  grid-template-columns: minmax(0, 1fr) 180px 76px 110px 34px;
+}
+.task-row input.r {
+  text-align: center;
+}
+.task-row-head .c {
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .task-row {
+    grid-template-columns: minmax(0, 1fr) 70px 34px;
+  }
+}
