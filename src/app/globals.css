@@ -2564,3 +2564,34 @@ label {
 .task-row > .icon-only {
   margin-top: 4px;
 }
+
+/* Reports list, compact: hours sit in a narrow column right before each task,
+   the member's total under their name, actions only on hover. */
+.report-row {
+  grid-template-columns: 150px 1fr 64px;
+  align-items: start;
+}
+.report-tasks li {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+}
+.report-tasks .task-hours {
+  text-align: right;
+  padding-top: 1px;
+}
+.report-tasks .task-name .wip-chip {
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+.report-tasks .task-name a:visited {
+  color: var(--text);
+}
+.row-actions {
+  opacity: 0;
+}
+@media (hover: none), (max-width: 760px) {
+  .row-actions {
+    opacity: 1;
+  }
+}

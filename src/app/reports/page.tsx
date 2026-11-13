@@ -196,7 +196,11 @@ export default function ReportsPage() {
                 <div className="day-group-head">
                   <span className="day-group-date">{formatDayLong(date)}</span>
                   <span className="muted">
-                    {list.length} report{list.length === 1 ? '' : 's'} · {round(list.reduce((s, r) => s + sum(r), 0))}h
+                    {list.length} report{list.length === 1 ? '' : 's'}
+                    {(() => {
+                      const h = round(list.reduce((t, r) => t + sum(r), 0));
+                      return h ? ` · ${h}h` : '';
+                    })()}
                   </span>
                 </div>
                 {list.map((r) => {
@@ -205,16 +209,23 @@ export default function ReportsPage() {
                     <div key={r.id} className="report-row">
                       <div className="member-cell report-row-member">
                         <Avatar name={r.member.name} src={avatarOf.get(r.member.id)} size={28} />
-                        <span className="member-cell-name">{r.member.name}</span>
-                        {r.source === 'google-chat' && (
-                          <span className="source-chip" title="Sent from Google Chat">
-                            <ChatIcon />
+                        <div className="member-cell-text">
+                          <span className="member-cell-name">
+                            {r.member.name}
+                            {r.source === 'google-chat' && (
+                              <span className="source-chip" title="Sent from Google Chat">
+                                {' '}
+                                <ChatIcon />
+                              </span>
+                            )}
                           </span>
-                        )}
+                          {hours > 0 && <span className="member-cell-sub">{formatHours(hours)}</span>}
+                        </div>
                       </div>
                       <ul className="report-tasks">
                         {r.entries.map((e) => (
                           <li key={e.id}>
+                            <span className="task-hours">{e.hours > 0 ? formatHours(e.hours) : ''}</span>
                             <span className="task-name">
                               {e.href ? (
                                 <a href={e.href} target="_blank" rel="noreferrer">
@@ -223,15 +234,11 @@ export default function ReportsPage() {
                               ) : (
                                 taskLabel(e)
                               )}
+                              {e.inProgress && <span className="wip-chip">In progress</span>}
                             </span>
-                            {e.inProgress && <span className="wip-chip">In progress</span>}
-                            {e.hours > 0 && <span className="task-hours">{formatHours(e.hours)}</span>}
                           </li>
                         ))}
                       </ul>
-                      <div className="report-row-total">
-                        {hours > 0 ? <strong>{formatHours(hours)}</strong> : <span className="muted">-</span>}
-                      </div>
                       <div className="row-actions">
                         <button className="icon-only" onClick={() => openEdit(r)} title="Edit" aria-label="Edit report">
                           <EditIcon />
