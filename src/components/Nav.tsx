@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { LOGO_URL } from '@/lib/brand';
 
@@ -45,41 +45,24 @@ const WipIcon = () => (
     <path d="M9 12h6M9 16h4" />
   </svg>
 );
-const ConfigIcon = () => (
+const SettingsIcon = () => (
   <svg {...ICON_PROPS}>
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.6a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.4a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1.04-1.56V4.4a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.56 1.04h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" />
-  </svg>
-);
-const TaskTypesIcon = () => (
-  <svg {...ICON_PROPS}>
-    <path d="M4 11.6 12.3 3.3a1 1 0 0 1 .9-.27l5.2.87a1 1 0 0 1 .83.83l.87 5.2a1 1 0 0 1-.27.9L12.4 19a1.4 1.4 0 0 1-2 0l-6.4-6.4a1.4 1.4 0 0 1 0-2Z" />
-    <circle cx="15.5" cy="8.5" r="1.4" />
-  </svg>
-);
-const ChevronIcon = () => (
-  <svg {...ICON_PROPS} width={15} height={15}>
-    <path d="m7 9 5 5 5-5" />
   </svg>
 );
 
 const LINKS: { href: string; label: string; icon: ReactNode }[] = [
   { href: '/', label: 'Home', icon: <HomeIcon /> },
   { href: '/reports', label: 'Reports', icon: <ReportsIcon /> },
-  { href: '/members', label: 'Members', icon: <MembersIcon /> },
   { href: '/wip', label: 'WIP', icon: <WipIcon /> },
-];
-
-const CONFIG_LINKS = [
-  { href: '/task-types', label: 'Task Types', icon: <TaskTypesIcon /> },
+  { href: '/members', label: 'Members', icon: <MembersIcon /> },
+  { href: '/settings', label: 'Settings', icon: <SettingsIcon /> },
 ];
 
 export function Nav() {
   const pathname = usePathname();
-  const inConfig = CONFIG_LINKS.some((l) => pathname.startsWith(l.href));
-  const [configOpen, setConfigOpen] = useState(inConfig);
-  // Home is a clean public dashboard - no sidebar. Reach management pages by
-  // typing their URL (e.g. /members).
+  // Home is a clean public dashboard - no sidebar.
   if (pathname === '/') return null;
 
   return (
@@ -90,52 +73,14 @@ export function Nav() {
       </Link>
       <nav>
         {LINKS.map((l) => {
-          const active =
-            l.href === '/' ? pathname === '/' : pathname.startsWith(l.href);
+          const active = l.href === '/' ? pathname === '/' : pathname.startsWith(l.href);
           return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`nav-link${active ? ' active' : ''}`}
-            >
+            <Link key={l.href} href={l.href} className={`nav-link${active ? ' active' : ''}`}>
               <span className="nav-icon">{l.icon}</span>
               {l.label}
             </Link>
           );
         })}
-
-        <button
-          type="button"
-          className="nav-link nav-group-toggle"
-          onClick={() => setConfigOpen((v) => !v)}
-        >
-          <span className="nav-link-main">
-            <span className="nav-icon">
-              <ConfigIcon />
-            </span>
-            Config
-          </span>
-          <span className={`nav-caret${configOpen ? ' open' : ''}`}>
-            <ChevronIcon />
-          </span>
-        </button>
-        {configOpen && (
-          <div className="nav-group">
-            {CONFIG_LINKS.map((l) => {
-              const active = pathname.startsWith(l.href);
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={`nav-link nav-sublink${active ? ' active' : ''}`}
-                >
-                  <span className="nav-icon">{l.icon}</span>
-                  {l.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </nav>
       <ThemeToggle floating />
     </aside>

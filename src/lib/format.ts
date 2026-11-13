@@ -23,3 +23,28 @@ export function formatDate(iso?: string | null): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
+
+/** 'YYYY-MM' as "November 2026". */
+export function monthLabel(month: string): string {
+  const [y, m] = month.split('-');
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** Today in Vietnam time, 'YYYY-MM-DD'. */
+export function todayVN(): string {
+  return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/** 'YYYY-MM-DD' shifted by whole days. */
+export function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "Thu, 13/11/2026" */
+export function formatDayLong(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const wd = d.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' });
+  return `${wd}, ${formatDate(iso)}`;
+}

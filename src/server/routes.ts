@@ -197,7 +197,7 @@ api.get('/wip/status', async () => send(await wip.status()));
 api.get('/wip/oauth/start', (c) => c.redirect(wip.getAuthUrl(new URL(c.req.url).origin)));
 api.get('/wip/oauth/callback', async (c) => {
   const origin = new URL(c.req.url).origin;
-  const back = (params: string) => c.redirect(`${origin}/wip?${params}`);
+  const back = (params: string) => c.redirect(`${origin}/settings?${params}`);
   const code = query(c, 'code');
   const error = query(c, 'error');
   if (error || !code) return back(`error=${encodeURIComponent(error ?? 'missing_code')}`);

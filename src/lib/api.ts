@@ -102,6 +102,7 @@ export const api = {
     position?: Member['position'];
     wipName?: string | null;
     teamworkEmail?: string;
+    chatUserId?: string;
     autoWip?: boolean;
   }) =>
     request<Member>('/members', { method: 'POST', body: JSON.stringify(data) }).finally(

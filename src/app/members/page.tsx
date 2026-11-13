@@ -7,6 +7,7 @@ import { Loading, Spinner } from '@/components/Spinner';
 import { Select } from '@/components/Select';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
+import { EditIcon } from '@/components/icons';
 import { resizeImage } from '@/lib/image';
 import type { Member, MemberPosition, MemberRole } from '@/lib/types';
 
@@ -15,34 +16,17 @@ const ROLE_LABELS: Record<MemberRole, string> = {
   part_time: 'Part-time',
   support: 'Support',
 };
-const ROLE_OPTIONS: MemberRole[] = ['full_time', 'part_time', 'support'];
-const POSITION_OPTIONS: { value: MemberPosition; label: string }[] = [
-  { value: 'dev', label: 'Dev' },
-  { value: 'tester', label: 'Tester' },
-];
+const POSITION_LABELS: Record<MemberPosition, string> = { dev: 'Dev', tester: 'Tester' };
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<MemberRole>('full_time');
-  const [position, setPosition] = useState<MemberPosition>('dev');
-  const [wipName, setWipName] = useState('');
-  const [teamworkEmail, setTeamworkEmail] = useState('');
-  const [autoWip, setAutoWip] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [savedMessage, setSavedMessage] = useState('');
-  const [syncMessage, setSyncMessage] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Member | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const rowFileRef = useRef<HTMLInputElement>(null);
-  const [avatarTarget, setAvatarTarget] = useState<string | null>(null);
-  const confirm = useConfirm();
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  /** null = closed, 'new' = add form, a member = edit form. */
+  const [editing, setEditing] = useState<Member | 'new' | null>(null);
+  const [history, setHistory] = useState<Member | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -54,202 +38,41 @@ export default function MembersPage() {
   };
   useEffect(load, []);
 
-  const pickNewAvatar = async (file?: File) => {
-    if (!file) return;
-    try {
-      setAvatar(await resizeImage(file, 300));
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
-  // In-place state update so toggles/avatar don't reload (and re-spinner) the list.
-  const patchMember = (id: string, patch: Partial<Member>) =>
-    setMembers((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-
-  const showSaved = () => {
-    setSavedMessage('Cập nhật thành công');
-    setTimeout(() => setSavedMessage(''), 2000);
-  };
-
-  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') e.currentTarget.blur();
-  };
-
-  const resetAddForm = () => {
-    setName('');
-    setEmail('');
-    setAvatar(null);
-    setRole('full_time');
-    setPosition('dev');
-    setWipName('');
-    setTeamworkEmail('');
-    setAutoWip(false);
-  };
-
-  const add = async () => {
-    setError('');
-    if (!name.trim() || !email.trim()) {
-      setError('Name and email are required.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const created = await api.createMember({
-        name: name.trim(),
-        email: email.trim(),
-        avatarUrl: avatar,
-        role,
-        position,
-        wipName: wipName.trim() || null,
-        teamworkEmail: teamworkEmail.trim() || undefined,
-        autoWip,
-      });
-      setMembers((ms) =>
-        [...ms, created].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      resetAddForm();
-      setShowAdd(false);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const changeAvatar = async (memberId: string, file?: File) => {
-    if (!file) return;
-    try {
-      const dataUrl = await resizeImage(file, 300);
-      patchMember(memberId, { avatarUrl: dataUrl }); // optimistic
-      await api.updateMember(memberId, { avatarUrl: dataUrl });
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
-  const saveRole = async (m: Member, next: MemberRole) => {
-    if (next === m.role) return;
-    const prev = m.role;
-    patchMember(m.id, { role: next }); // optimistic
-    try {
-      await api.updateMember(m.id, { role: next });
-      showSaved();
-    } catch (e: any) {
-      patchMember(m.id, { role: prev }); // revert
-      setError(e.message);
-    }
-  };
-
-  const savePosition = async (m: Member, next: MemberPosition) => {
-    if (next === m.position) return;
-    const prev = m.position;
-    patchMember(m.id, { position: next }); // optimistic
-    try {
-      await api.updateMember(m.id, { position: next });
-      showSaved();
-    } catch (e: any) {
-      patchMember(m.id, { position: prev }); // revert
-      setError(e.message);
-    }
-  };
+  const patch = (id: string, p: Partial<Member>) =>
+    setMembers((ms) => ms.map((m) => (m.id === id ? { ...m, ...p } : m)));
 
   const toggleAutoWip = async (m: Member) => {
-    const next = !m.autoWip;
-    patchMember(m.id, { autoWip: next }); // optimistic
+    patch(m.id, { autoWip: !m.autoWip }); // optimistic
     try {
-      await api.updateMember(m.id, { autoWip: next });
+      await api.updateMember(m.id, { autoWip: !m.autoWip });
     } catch (e: any) {
-      patchMember(m.id, { autoWip: m.autoWip }); // revert
+      patch(m.id, { autoWip: m.autoWip });
       setError(e.message);
     }
   };
 
-  const saveWipName = async (m: Member, value: string) => {
-    const next = value.trim();
-    if (next === (m.wipName ?? '')) return;
-    patchMember(m.id, { wipName: next || null }); // optimistic
-    try {
-      await api.updateMember(m.id, { wipName: next });
-      showSaved();
-    } catch (e: any) {
-      patchMember(m.id, { wipName: m.wipName }); // revert
-      setError(e.message);
-    }
-  };
-
-  const saveTeamworkEmail = async (m: Member, value: string) => {
-    const next = value.trim();
-    if (next === (m.teamworkEmail ?? '')) return;
-    patchMember(m.id, { teamworkEmail: next || null }); // optimistic
-    try {
-      await api.updateMember(m.id, { teamworkEmail: next });
-      showSaved();
-    } catch (e: any) {
-      patchMember(m.id, { teamworkEmail: m.teamworkEmail }); // revert
-      setError(e.message);
-    }
-  };
-
-  const saveChatUserId = async (m: Member, value: string) => {
-    const next = value.trim();
-    if (next === (m.chatUserId ?? '')) return;
-    patchMember(m.id, { chatUserId: next || null }); // optimistic
-    try {
-      await api.updateMember(m.id, { chatUserId: next });
-      showSaved();
-    } catch (e: any) {
-      patchMember(m.id, { chatUserId: m.chatUserId }); // revert
-      setError(e.message);
-    }
-  };
-
+  /** Fills missing Chat IDs from the members of the team's Chat space, by email. */
   const syncChatIds = async () => {
     setError('');
-    setSyncMessage('');
+    setNotice('');
     setSyncing(true);
     try {
-      const chatMembers = await api.wipChatMembers();
-      const byEmail = new Map(
-        chatMembers
-          .filter((c) => c.email)
-          .map((c) => [c.email!.trim().toLowerCase(), c.chatUserId]),
-      );
+      const chat = await api.wipChatMembers();
+      const byEmail = new Map(chat.filter((c) => c.email).map((c) => [c.email!.trim().toLowerCase(), c.chatUserId]));
       let updated = 0;
       for (const m of members) {
-        const match = byEmail.get(m.email.trim().toLowerCase());
-        if (match && match !== m.chatUserId) {
-          await api.updateMember(m.id, { chatUserId: match });
+        const id = byEmail.get(m.email.trim().toLowerCase());
+        if (id && id !== m.chatUserId) {
+          await api.updateMember(m.id, { chatUserId: id });
           updated++;
         }
       }
-      if (updated > 0) load(); // remount rows so the (uncontrolled) inputs reflect the new values
-      setSyncMessage(
-        updated > 0
-          ? `Synced ${updated} member(s) by email.`
-          : 'No matches - no member emails matched a Chat member email.',
-      );
+      if (updated) load();
+      setNotice(updated ? `Updated the Chat ID of ${updated} member(s).` : 'Chat IDs are already up to date.');
     } catch (e: any) {
       setError(e.message);
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const remove = async (m: Member) => {
-    const ok = await confirm({
-      title: `Delete ${m.name}?`,
-      message:
-        'This also deletes all their reports and attendance. This cannot be undone.',
-      confirmLabel: 'Delete',
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await api.deleteMember(m.id);
-      setMembers((ms) => ms.filter((x) => x.id !== m.id));
-    } catch (e: any) {
-      setError(e.message);
     }
   };
 
@@ -258,285 +81,319 @@ export default function MembersPage() {
       <div className="page-head-row">
         <div>
           <h1 className="page-title">Members</h1>
-          <p className="page-sub" style={{ margin: 0 }}>
-            Only registered emails may report. A Google Chat sender with an
-            unregistered email is blocked.
-          </p>
+          <p className="page-sub">Only registered emails can report or use /wip in Chat.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {savedMessage && (
-            <span className="muted" style={{ fontSize: 13 }}>
-              {savedMessage}
-            </span>
-          )}
-          <button className="btn ghost" onClick={syncChatIds} disabled={syncing}>
-            {syncing ? (
-              <span className="btn-spin">
-                <Spinner sm /> Syncing…
-              </span>
-            ) : (
-              'Sync Google Chat ID'
-            )}
+        <div className="toolbar">
+          <button
+            className="btn ghost"
+            onClick={syncChatIds}
+            disabled={syncing}
+            title="Match members to the Google Chat space by email, so reminders can @mention them"
+          >
+            {syncing && <Spinner sm />} Sync Chat IDs
           </button>
-          <button className="btn" onClick={() => setShowAdd(true)}>
-            + Add
+          <button className="btn" onClick={() => setEditing('new')}>
+            + Add member
           </button>
         </div>
       </div>
 
       {error && <div className="alert error">{error}</div>}
-      {syncMessage && <div className="alert ok">{syncMessage}</div>}
+      {notice && <div className="alert ok">{notice}</div>}
 
       <div className="panel">
-        <div className="panel-head">{members.length} member(s)</div>
         {loading ? (
           <Loading />
         ) : members.length === 0 ? (
-          <div className="empty">No members yet.</div>
+          <div className="empty">
+            No members yet.{' '}
+            <button className="link-btn" onClick={() => setEditing('new')}>
+              Add the first one
+            </button>
+          </div>
         ) : (
-          <table style={{ minWidth: 1080 }}>
+          <table className="members-table">
             <thead>
               <tr>
-                <th className="c">Name</th>
-                <th className="c">Email</th>
-                <th className="c">Teamwork email</th>
-                <th className="c">WIP name</th>
-                <th className="c">Chat ID</th>
-                <th className="c" style={{ whiteSpace: 'nowrap' }}>Auto WIP</th>
-                <th className="c">Role</th>
-                <th className="c">Position</th>
-                <th className="c"></th>
+                <th>Member</th>
+                <th>Role</th>
+                <th>WIP name</th>
+                <th className="c" title="Fill empty WIP automatically (18:30 evening, 09:45 morning)">
+                  Auto WIP
+                </th>
+                <th />
               </tr>
             </thead>
             <tbody>
-              {members.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    <div className="member-cell">
-                      <span
-                        className="avatar-click"
-                        onClick={() => {
-                          setAvatarTarget(m.id);
-                          rowFileRef.current?.click();
-                        }}
-                        title="Change avatar"
-                      >
+              {members.map((m) => {
+                const warnings = [!m.wipName && 'No WIP name', !m.chatUserId && 'No Chat ID'].filter(Boolean);
+                return (
+                  <tr key={m.id}>
+                    <td>
+                      <div className="member-cell">
                         <Avatar name={m.name} src={m.avatarUrl} size={32} />
-                      </span>
-                      <button className="name-link" onClick={() => setSelected(m)}>
-                        {m.name}
+                        <div className="member-cell-text">
+                          <button className="name-link member-cell-name" onClick={() => setHistory(m)} title="See their reports">
+                            {m.name}
+                          </button>
+                          <span className="member-cell-sub">{m.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge gray">{ROLE_LABELS[m.role]}</span>{' '}
+                      <span className="badge gray">{POSITION_LABELS[m.position ?? 'dev']}</span>
+                    </td>
+                    <td>
+                      {m.wipName ?? <span className="muted">—</span>}
+                      {warnings.length > 0 && <div className="warn-text">{warnings.join(' · ')}</div>}
+                    </td>
+                    <td className="c">
+                      <label className="switch" title={m.autoWip ? 'On' : 'Off'}>
+                        <input type="checkbox" checked={!!m.autoWip} onChange={() => toggleAutoWip(m)} />
+                        <span />
+                      </label>
+                    </td>
+                    <td className="c">
+                      <button className="icon-only" onClick={() => setEditing(m)} title="Edit" aria-label={`Edit ${m.name}`}>
+                        <EditIcon />
                       </button>
-                    </div>
-                  </td>
-                  <td className="mid">{m.email}</td>
-                  <td className="mid">
-                    <input
-                      key={m.id}
-                      defaultValue={m.teamworkEmail ?? ''}
-                      placeholder={m.email}
-                      onBlur={(e) => saveTeamworkEmail(m, e.target.value)}
-                      onKeyDown={blurOnEnter}
-                      style={{ width: '100%', minWidth: 180 }}
-                    />
-                  </td>
-                  <td className="mid">
-                    <input
-                      key={m.id}
-                      defaultValue={m.wipName ?? ''}
-                      onBlur={(e) => saveWipName(m, e.target.value)}
-                      onKeyDown={blurOnEnter}
-                      style={{ width: '100%', minWidth: 160 }}
-                    />
-                  </td>
-                  <td className="mid">
-                    <input
-                      key={m.id}
-                      defaultValue={(m.chatUserId ?? '').replace(/^users\//, '')}
-                      placeholder="1234567890"
-                      onBlur={(e) => saveChatUserId(m, e.target.value)}
-                      onKeyDown={blurOnEnter}
-                      style={{ width: '100%', minWidth: 170 }}
-                    />
-                  </td>
-                  <td className="c mid">
-                    <input
-                      type="checkbox"
-                      checked={!!m.autoWip}
-                      onChange={() => toggleAutoWip(m)}
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                    />
-                  </td>
-                  <td className="mid" style={{ minWidth: 140 }}>
-                    <Select
-                      value={m.role}
-                      onChange={(v) => saveRole(m, v as MemberRole)}
-                      options={ROLE_OPTIONS.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
-                    />
-                  </td>
-                  <td className="mid" style={{ minWidth: 110 }}>
-                    <Select
-                      value={m.position ?? 'dev'}
-                      onChange={(v) => savePosition(m, v as MemberPosition)}
-                      options={POSITION_OPTIONS}
-                    />
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn danger sm" onClick={() => remove(m)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* Hidden input for changing an existing member's avatar. */}
-      <input
-        ref={rowFileRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          if (avatarTarget) changeAvatar(avatarTarget, e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
-
-      {showAdd && (
-        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Add member</h3>
-            <div className="field">
-              <label>Avatar</label>
-              <div className="avatar-upload">
-                <div
-                  className="avatar-pick"
-                  onClick={() => fileRef.current?.click()}
-                  title="Upload avatar"
-                >
-                  {avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatar} alt="avatar preview" />
-                  ) : (
-                    <span className="muted" style={{ fontSize: 22 }}>
-                      +
-                    </span>
-                  )}
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => pickNewAvatar(e.target.files?.[0])}
-                />
-                <span className="hint" style={{ margin: 0 }}>
-                  Auto-resized to 300px.
-                </span>
-              </div>
-            </div>
-            <div className="field">
-              <label>Full name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nguyen Van A"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div className="field">
-              <label>Email</label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="a@offspringdigital.com"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div className="field">
-              <label>WIP name (optional)</label>
-              <input
-                value={wipName}
-                onChange={(e) => setWipName(e.target.value)}
-                placeholder="Nguyen Van A (Nickname)"
-                style={{ width: '100%' }}
-              />
-              <div className="hint">
-                Must match &quot;Staff&apos;s name&quot; exactly as it appears in the
-                WIP sheet.
-              </div>
-            </div>
-            <div className="field">
-              <label>Teamwork email (optional)</label>
-              <input
-                value={teamworkEmail}
-                onChange={(e) => setTeamworkEmail(e.target.value)}
-                placeholder={email || 'defaults to Email above'}
-                style={{ width: '100%' }}
-              />
-              <div className="hint">Only needed if different from Email above.</div>
-            </div>
-            <div className="field">
-              <label>Role</label>
-              <Select
-                value={role}
-                onChange={(v) => setRole(v as MemberRole)}
-                options={ROLE_OPTIONS.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
-              />
-              <div className="hint">Support members skip daily reminders.</div>
-            </div>
-            <div className="field">
-              <label>Position</label>
-              <Select
-                value={position}
-                onChange={(v) => setPosition(v as MemberPosition)}
-                options={POSITION_OPTIONS}
-              />
-              <div className="hint">
-                When auto-WIP would repeat a recent entry, it adds Review code (dev) or Smoke test (tester).
-              </div>
-            </div>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={autoWip}
-                onChange={(e) => setAutoWip(e.target.checked)}
-              />
-              <span>Auto WIP (fill an empty WIP: evening from the morning at 18:30, morning from the D1 board at 9:45)</span>
-            </label>
-            <div className="modal-actions">
-              <button
-                className="btn ghost"
-                onClick={() => {
-                  setShowAdd(false);
-                  resetAddForm();
-                }}
-              >
-                Cancel
-              </button>
-              <button className="btn" onClick={add} disabled={saving}>
-                {saving ? (
-                  <span className="btn-spin">
-                    <Spinner sm /> Adding…
-                  </span>
-                ) : (
-                  'Add member'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {editing && (
+        <MemberForm
+          member={editing === 'new' ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={(saved) => {
+            setMembers((ms) =>
+              (ms.some((x) => x.id === saved.id) ? ms.map((x) => (x.id === saved.id ? saved : x)) : [...ms, saved]).sort(
+                (a, b) => a.name.localeCompare(b.name),
+              ),
+            );
+            setEditing(null);
+          }}
+          onDeleted={(id) => {
+            setMembers((ms) => ms.filter((x) => x.id !== id));
+            setEditing(null);
+          }}
+        />
       )}
 
-      {selected && (
+      {history && (
         <MemberDetail
-          memberId={selected.id}
-          memberName={selected.name}
-          avatarUrl={selected.avatarUrl}
-          onClose={() => setSelected(null)}
+          memberId={history.id}
+          memberName={history.name}
+          avatarUrl={history.avatarUrl}
+          onClose={() => setHistory(null)}
         />
       )}
     </>
+  );
+}
+
+/** Add / edit form for one member. */
+function MemberForm({
+  member,
+  onClose,
+  onSaved,
+  onDeleted,
+}: {
+  member: Member | null;
+  onClose: () => void;
+  onSaved: (m: Member) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const confirm = useConfirm();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [f, setF] = useState({
+    name: member?.name ?? '',
+    email: member?.email ?? '',
+    role: member?.role ?? ('full_time' as MemberRole),
+    position: member?.position ?? ('dev' as MemberPosition),
+    wipName: member?.wipName ?? '',
+    teamworkEmail: member?.teamworkEmail ?? '',
+    chatUserId: (member?.chatUserId ?? '').replace(/^users\//, ''),
+    autoWip: member?.autoWip ?? false,
+  });
+  /** A new image as a data URL; undefined = unchanged. */
+  const [avatar, setAvatar] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const pickAvatar = async (file?: File) => {
+    if (!file) return;
+    try {
+      setAvatar(await resizeImage(file, 300));
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const save = async () => {
+    setError('');
+    if (!f.name.trim() || !f.email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = {
+        name: f.name.trim(),
+        email: f.email.trim(),
+        role: f.role,
+        position: f.position,
+        wipName: f.wipName.trim(),
+        teamworkEmail: f.teamworkEmail.trim(),
+        chatUserId: f.chatUserId.trim(),
+        autoWip: f.autoWip,
+        ...(avatar !== undefined ? { avatarUrl: avatar } : {}),
+      };
+      const saved = member
+        ? await api.updateMember(member.id, body)
+        : await api.createMember({
+            ...body,
+            wipName: body.wipName || null,
+            teamworkEmail: body.teamworkEmail || undefined,
+            chatUserId: body.chatUserId || undefined,
+          });
+      onSaved(saved);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!member) return;
+    const yes = await confirm({
+      title: `Delete ${member.name}?`,
+      message: 'This also deletes all their reports and leave days. This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!yes) return;
+    try {
+      await api.deleteMember(member.id);
+      onDeleted(member.id);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const shownAvatar = avatar ?? member?.avatarUrl ?? null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal-form" onClick={(e) => e.stopPropagation()}>
+        <h3>{member ? `Edit ${member.name}` : 'Add member'}</h3>
+        {error && <div className="alert error">{error}</div>}
+
+        <div className="form-identity">
+          <button type="button" className="avatar-pick" onClick={() => fileRef.current?.click()} title="Change photo">
+            {shownAvatar ? (
+              <Avatar name={f.name || '?'} src={shownAvatar} size={56} />
+            ) : (
+              <span className="muted" style={{ fontSize: 22 }}>
+                +
+              </span>
+            )}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => pickAvatar(e.target.files?.[0])} />
+          <div className="form-grid" style={{ flex: 1 }}>
+            <div className="field">
+              <label>Full name</label>
+              <input value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!member} />
+            </div>
+            <div className="field">
+              <label>Email</label>
+              <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-grid">
+          <div className="field">
+            <label>Role</label>
+            <Select
+              value={f.role}
+              onChange={(v) => set('role', (v || 'full_time') as MemberRole)}
+              placeholder=""
+              options={(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+            />
+            <div className="hint">Support members aren&apos;t reminded.</div>
+          </div>
+          <div className="field">
+            <label>Position</label>
+            <Select
+              value={f.position}
+              onChange={(v) => set('position', (v || 'dev') as MemberPosition)}
+              placeholder=""
+              options={(Object.keys(POSITION_LABELS) as MemberPosition[]).map((p) => ({ value: p, label: POSITION_LABELS[p] }))}
+            />
+            <div className="hint">Auto-WIP adds Review code (dev) / Smoke test (tester) to avoid repeats.</div>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>WIP name</label>
+          <input value={f.wipName} onChange={(e) => set('wipName', e.target.value)} placeholder="Nguyen Van A (A)" />
+          <div className="hint">Exactly as in the &quot;Staff&apos;s name&quot; column of the WIP sheet.</div>
+        </div>
+
+        <div className="form-grid">
+          <div className="field">
+            <label>Teamwork email</label>
+            <input
+              value={f.teamworkEmail}
+              onChange={(e) => set('teamworkEmail', e.target.value)}
+              placeholder={f.email || 'Same as email'}
+            />
+            <div className="hint">Only if their Teamwork login differs.</div>
+          </div>
+          <div className="field">
+            <label>Google Chat ID</label>
+            <input value={f.chatUserId} onChange={(e) => set('chatUserId', e.target.value)} placeholder="1234567890" />
+            <div className="hint">For @mentions. &quot;Sync Chat IDs&quot; fills it in.</div>
+          </div>
+        </div>
+
+        <label className="checkbox-row">
+          <input type="checkbox" checked={f.autoWip} onChange={(e) => set('autoWip', e.target.checked)} />
+          <span>
+            <strong>Auto WIP</strong> — fill an empty evening from the morning (18:30) and an empty morning from the D1
+            board (09:45)
+          </span>
+        </label>
+
+        <div className="modal-actions">
+          {member && (
+            <button className="btn danger" onClick={remove} style={{ marginRight: 'auto' }}>
+              Delete member
+            </button>
+          )}
+          <button className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn" onClick={save} disabled={saving}>
+            {saving ? <Spinner sm /> : member ? 'Save' : 'Add member'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
