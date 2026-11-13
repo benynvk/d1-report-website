@@ -219,7 +219,6 @@ export default function ReportsPage() {
                               </span>
                             )}
                           </span>
-                          {hours > 0 && <span className="member-cell-sub">{formatHours(hours)}</span>}
                         </div>
                       </div>
                       <ul className="report-tasks">
@@ -239,6 +238,9 @@ export default function ReportsPage() {
                           </li>
                         ))}
                       </ul>
+                      <div className="report-row-total">
+                        {hours > 0 ? formatHours(hours) : <span className="muted">-</span>}
+                      </div>
                       <div className="row-actions">
                         <button className="icon-only" onClick={() => openEdit(r)} title="Edit" aria-label="Edit report">
                           <EditIcon />

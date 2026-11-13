@@ -2595,3 +2595,15 @@ label {
     opacity: 1;
   }
 }
+
+/* Total hours back as a right-aligned column, actions beside it on hover. */
+.report-row {
+  grid-template-columns: 130px 1fr 72px 64px;
+  gap: 12px;
+}
+.report-row-total {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
