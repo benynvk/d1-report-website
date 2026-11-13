@@ -83,17 +83,22 @@ export function makeUnique(lines: CellLine[], history: Set<string>, filler: stri
 const EVENING_STATUS = ' => In progress';
 
 /**
- * The evening entry made from a morning one: same tasks (links kept), each
- * Teamwork task marked " => In progress" like a hand-written evening WIP.
+ * The evening entry made from a morning one: the same tasks (links kept),
+ * each marked " => In progress" — a line that already has a "=>" status keeps it,
+ * and an "Other - " prefix is dropped.
  */
 export function eveningFromMorning(morning: CellLine[]): CellLine[] {
   return morning
-    .map((l) => ({
-      display: l.display,
-      url: l.url ?? null,
-      suffix: l.url && !/=>/.test(l.suffix ?? '') ? `${l.suffix ?? ''}${EVENING_STATUS}` : l.suffix,
-    }))
-    .filter((l) => l.display.trim());
+    .filter((l) => l.display.trim())
+    .map((l) => {
+      const hasStatus = /=>/.test(`${l.display}${l.suffix ?? ''}`);
+      return {
+        // An "Other" task shows just its description (older cells still carry the prefix).
+        display: l.url ? l.display : l.display.replace(/^other\s+-\s+/i, '') || l.display,
+        url: l.url ?? null,
+        suffix: hasStatus ? l.suffix : `${l.suffix ?? ''}${EVENING_STATUS}`,
+      };
+    });
 }
 
 // ---------- Reading a rich cell ----------

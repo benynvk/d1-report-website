@@ -95,10 +95,19 @@ describe('makeUnique', () => {
 });
 
 describe('eveningFromMorning', () => {
-  it('copies the tasks with their links and marks Teamwork tasks in progress', () => {
+  it('copies every task with its link and marks each one in progress', () => {
     const e = eveningFromMorning([{ display: 'Task A', url: 'u1' }, { display: 'Weekly meeting' }]);
-    expect(cellText(e)).toBe('Task A => In progress\nWeekly meeting');
+    expect(cellText(e)).toBe('Task A => In progress\nWeekly meeting => In progress');
     expect(e[0].url).toBe('u1');
+  });
+
+  it('drops the "Other - " prefix of a no-link task', () => {
+    expect(cellText(eveningFromMorning([{ display: 'Other - Update deps' }]))).toBe('Update deps => In progress');
+  });
+
+  it('keeps a status that is already there', () => {
+    const e = eveningFromMorning([{ display: 'Task A', url: 'u1', suffix: ' => Done' }, { display: 'Fix CI => 80%' }]);
+    expect(cellText(e)).toBe('Task A => Done\nFix CI => 80%');
   });
 });
 
