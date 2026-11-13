@@ -559,7 +559,7 @@ export function ImportReportModal({
                     <div className="task-cell">
                       {link && r.previewTitle ? (
                         <div className="link-preview">
-                          <a href={r.text} target="_blank" rel="noreferrer" className="link-preview-title" title={r.text}>
+                          <a href={r.text} target="_blank" rel="noreferrer" className="link-preview-title" title={`${r.previewTitle}\n${r.text}`}>
                             {r.previewTitle}
                           </a>
                           <button

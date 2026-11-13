@@ -2541,3 +2541,26 @@ label {
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
+
+/* Task rows: a resolved Teamwork title is exactly as tall as an input (39px),
+   on one line — every row the same height. */
+.task-row .link-preview {
+  min-height: 39px;
+  height: 39px;
+  padding: 0 4px 0 11px;
+}
+.task-row .link-preview-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-row .link-preview .icon-only {
+  margin-top: 0;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.task-row > .icon-only {
+  margin-top: 4px;
+}
