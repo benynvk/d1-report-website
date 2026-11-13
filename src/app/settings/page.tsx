@@ -112,9 +112,11 @@ function GoogleConnection({ onError }: { onError: (m: string) => void }) {
         <Loading />
       ) : status.connected ? (
         <div className="settings-line">
-          <span className="status-dot ok" />
-          <span>
-            Connected as <strong>{status.email}</strong>
+          <span className="settings-status">
+            <span className="status-dot ok" />
+            <span>
+              Connected as <strong>{status.email}</strong>
+            </span>
           </span>
           <span className="spacer" />
           <button className="btn ghost sm" onClick={connect}>
@@ -126,8 +128,10 @@ function GoogleConnection({ onError }: { onError: (m: string) => void }) {
         </div>
       ) : (
         <div className="settings-line">
-          <span className="status-dot off" />
-          <span className="muted">Not connected - WIP, reminders and auto-WIP are off.</span>
+          <span className="settings-status">
+            <span className="status-dot off" />
+            <span className="muted">Not connected - WIP, reminders and auto-WIP are off.</span>
+          </span>
           <span className="spacer" />
           <button className="btn sm" onClick={connect}>
             Connect Google

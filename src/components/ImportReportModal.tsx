@@ -657,6 +657,7 @@ export function ImportReportModal({
                         title="Not finished on this day"
                         aria-label="In progress"
                       />
+                      {!r.inProgress && <span className="progress-label">In progress</span>}
                       {r.inProgress && (
                         <div className="progress-input">
                           <input

@@ -2658,3 +2658,240 @@ label {
   color: var(--muted);
   font-size: 12px;
 }
+
+.settings-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===================================================================== */
+/* Phones (≤ 760px) — kept last so nothing above overrides it.            */
+/* ===================================================================== */
+@media (max-width: 760px) {
+  /* Sidebar becomes a top bar; the theme toggle sits in its corner instead
+     of floating over the page. */
+  .sidebar {
+    position: relative;
+  }
+  .theme-toggle.floating {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+  }
+
+  /* Page header: title, then the actions as one full-width row. */
+  .page-head-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .page-head-row .toolbar {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .page-head-row .toolbar .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Filters: presets scroll sideways, dates share a row, member select full width. */
+  .filter-head {
+    gap: 10px;
+    padding: 12px;
+  }
+  .preset-group {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .preset-btn {
+    flex: 1 0 auto;
+    white-space: nowrap;
+    padding: 6px 10px;
+  }
+  .date-range {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    width: 100%;
+  }
+  .date-range .date-field {
+    width: 100%;
+    justify-content: center;
+  }
+  .filter-head > div:not(.preset-group):not(.date-range):not(.date-nav) {
+    width: 100%;
+    min-width: 0 !important;
+  }
+  .filter-head-count {
+    margin-left: 0;
+  }
+
+  /* Reports: member + total + actions on top, tasks underneath. */
+  .report-row {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      'member total actions'
+      'tasks tasks tasks';
+    gap: 8px 10px;
+    padding: 12px;
+  }
+  .report-row-member {
+    grid-area: member;
+    grid-column: auto;
+  }
+  .report-row-total {
+    grid-area: total;
+    align-self: center;
+  }
+  .report-row .row-actions {
+    grid-area: actions;
+    opacity: 1;
+  }
+  .report-tasks {
+    grid-area: tasks;
+  }
+  .day-group-head {
+    padding: 10px 12px;
+  }
+
+  /* WIP: one card per person — name, then Morning and Evening stacked. */
+  .wip-table,
+  .wip-table tbody,
+  .wip-table tr,
+  .wip-table td {
+    display: block;
+    width: 100%;
+  }
+  .wip-table colgroup,
+  .wip-table thead {
+    display: none;
+  }
+  .wip-table tr {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wip-table td {
+    padding: 4px 0;
+    border: none;
+  }
+  .wip-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin: 6px 0 2px;
+  }
+
+  /* Members: name + switch + edit on top, role and WIP name underneath. */
+  .members-table thead {
+    display: none;
+  }
+  .members-table,
+  .members-table tbody {
+    display: block;
+  }
+  .members-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      'member auto edit'
+      'role role role'
+      'wip wip wip';
+    align-items: center;
+    gap: 4px 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .members-table td {
+    padding: 0;
+    border: none;
+  }
+  .members-table .m-member { grid-area: member; min-width: 0; }
+  .members-table .m-auto { grid-area: auto; }
+  .members-table .m-edit { grid-area: edit; }
+  .members-table .m-role { grid-area: role; padding-left: 42px; }
+  .members-table .m-wip { grid-area: wip; padding-left: 42px; font-size: 13px; color: var(--muted); }
+  .members-table .badge {
+    white-space: nowrap;
+  }
+
+  /* Settings */
+  .inline-form > * {
+    flex: 1 1 100%;
+  }
+  .inline-form > div {
+    width: 100% !important;
+  }
+
+  /* Modals use the full width. */
+  .modal-overlay {
+    padding: 10px;
+  }
+  .modal {
+    padding: 16px;
+  }
+}
+
+/* "In progress" text next to the checkbox — phones only (the column header says it on desktop). */
+.progress-label {
+  display: none;
+}
+
+/* Report form on phones: line 1 = task, hours, remove; line 2 = note, In progress (+ %). */
+@media (max-width: 720px) {
+  .task-row {
+    grid-template-columns: minmax(0, 1fr) 70px 34px;
+    grid-template-areas:
+      'task hours remove'
+      'note progress progress';
+    padding: 10px;
+  }
+  .task-row > .task-cell { grid-area: task; }
+  .task-row > :nth-child(2) { grid-area: note; grid-column: auto; order: 0; }
+  .task-row > :nth-child(3) { grid-area: hours; }
+  .task-row > .progress-cell {
+    display: flex;
+    grid-area: progress;
+    justify-content: flex-start;
+    padding-left: 4px;
+  }
+  .task-row > .icon-only { grid-area: remove; }
+  .progress-label {
+    display: inline;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .report-form-who > div,
+  .report-form-who .date-field {
+    width: 100%;
+  }
+  .report-form-who .preset-group {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+    gap: 6px;
+    overflow: visible;
+  }
+  .report-form-who .preset-btn {
+    padding: 6px 2px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .report-form-foot .btn {
+    flex: 1 1 auto;
+  }
+}

@@ -194,10 +194,10 @@ export default function WipPage() {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Morning">
                     <WipCell text={r.morning} />
                   </td>
-                  <td>
+                  <td data-label="Evening">
                     <WipCell text={r.evening} />
                   </td>
                 </tr>

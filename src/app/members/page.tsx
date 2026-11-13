@@ -129,7 +129,7 @@ export default function MembersPage() {
                 const warnings = [!m.wipName && 'No WIP name', !m.chatUserId && 'No Chat ID'].filter(Boolean);
                 return (
                   <tr key={m.id}>
-                    <td>
+                    <td className="m-member">
                       <div className="member-cell">
                         <Avatar name={m.name} src={m.avatarUrl} size={32} />
                         <div className="member-cell-text">
@@ -140,21 +140,21 @@ export default function MembersPage() {
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td className="m-role">
                       <span className="badge gray">{ROLE_LABELS[m.role]}</span>{' '}
                       <span className="badge gray">{POSITION_LABELS[m.position ?? 'dev']}</span>
                     </td>
-                    <td>
+                    <td className="m-wip">
                       {m.wipName ?? <span className="muted">-</span>}
                       {warnings.length > 0 && <div className="warn-text">{warnings.join(' · ')}</div>}
                     </td>
-                    <td className="c">
+                    <td className="c m-auto">
                       <label className="switch" title={m.autoWip ? 'On' : 'Off'}>
                         <input type="checkbox" checked={!!m.autoWip} onChange={() => toggleAutoWip(m)} />
                         <span />
                       </label>
                     </td>
-                    <td className="c">
+                    <td className="c m-edit">
                       <button className="icon-only" onClick={() => setEditing(m)} title="Edit" aria-label={`Edit ${m.name}`}>
                         <EditIcon />
                       </button>
