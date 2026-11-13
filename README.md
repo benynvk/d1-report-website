@@ -33,12 +33,11 @@ finishes in the background). Timezone **Asia/Ho_Chi_Minh**, Monday–Friday:
 | Time | Job | What it does |
 |---|---|---|
 | 09:30 | `wip-reminder` | @mentions who hasn't filled this morning's WIP or the previous working day's evening WIP |
-| 09:45 and 09:59 | `auto-wip` | for members with auto-WIP on: previous working day's empty evening ← its morning; today's empty morning ← up to 2 tasks from the D1 board |
+| 09:45 | `auto-wip` | for members with auto-WIP on: previous working day's empty evening ← its morning; today's empty morning ← up to 2 tasks from the D1 board |
 | 18:00 | `wip-evening-reminder` | @mentions who hasn't filled today's evening WIP |
-| 18:30 and 18:45 | `auto-wip-evening` | for members with auto-WIP on: today's empty evening ← today's morning |
+| 18:30 | `auto-wip-evening` | for members with auto-WIP on: today's empty evening ← today's morning |
 
-The second auto-WIP run is a safety net: it only fills cells that are still
-empty. Auto-WIP never repeats an entry from the last 7 calendar days — it
+Auto-WIP only fills cells that are still empty, and never repeats an entry from the last 7 calendar days — it
 reorders the tasks, or adds "Review code" (dev) / "Smoke test" (tester).
 Preview without writing: `GET /api/wip/auto-plan?job=morning|evening&date=YYYY-MM-DD&all=1`.
 `REMINDER_ENABLED=false` turns every job off.
