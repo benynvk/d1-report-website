@@ -145,7 +145,7 @@ export default function MembersPage() {
                       <span className="badge gray">{POSITION_LABELS[m.position ?? 'dev']}</span>
                     </td>
                     <td>
-                      {m.wipName ?? <span className="muted">—</span>}
+                      {m.wipName ?? <span className="muted">-</span>}
                       {warnings.length > 0 && <div className="warn-text">{warnings.join(' · ')}</div>}
                     </td>
                     <td className="c">
@@ -375,7 +375,7 @@ function MemberForm({
         <label className="checkbox-row">
           <input type="checkbox" checked={f.autoWip} onChange={(e) => set('autoWip', e.target.checked)} />
           <span>
-            <strong>Auto WIP</strong> — fill an empty evening from the morning (18:30) and an empty morning from the D1
+            <strong>Auto WIP</strong> - fill an empty evening from the morning (18:30) and an empty morning from the D1
             board (09:45)
           </span>
         </label>

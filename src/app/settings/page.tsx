@@ -116,7 +116,7 @@ function GoogleConnection({ onError }: { onError: (m: string) => void }) {
       ) : (
         <div className="settings-line">
           <span className="status-dot off" />
-          <span className="muted">Not connected — WIP, reminders and auto-WIP are off.</span>
+          <span className="muted">Not connected - WIP, reminders and auto-WIP are off.</span>
           <span className="spacer" />
           <button className="btn sm" onClick={connect}>
             Connect Google
@@ -170,7 +170,7 @@ function MonthSheets({ onError }: { onError: (m: string) => void }) {
   };
 
   return (
-    <Section title="WIP sheet per month" sub="A new WIP spreadsheet is created every month — add its link here.">
+    <Section title="WIP sheet per month" sub="A new WIP spreadsheet is created every month - add its link here.">
       <div className="inline-form">
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={{ width: 170 }} />
         <input
@@ -185,7 +185,7 @@ function MonthSheets({ onError }: { onError: (m: string) => void }) {
         </button>
       </div>
       {existing && url.trim() && (
-        <div className="hint">{monthLabel(month)} already has a sheet — this replaces it.</div>
+        <div className="hint">{monthLabel(month)} already has a sheet - this replaces it.</div>
       )}
 
       {!configs ? (

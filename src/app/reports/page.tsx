@@ -225,7 +225,7 @@ export default function ReportsPage() {
                         ))}
                       </ul>
                       <div className="report-row-total">
-                        {hours > 0 ? <strong>{formatHours(hours)}</strong> : <span className="muted" title="No hours yet — a plan for the day">Plan</span>}
+                        {hours > 0 ? <strong>{formatHours(hours)}</strong> : <span className="muted" title="No hours yet - a plan for the day">Plan</span>}
                       </div>
                       <div className="row-actions">
                         <button className="icon-only" onClick={() => openEdit(r)} title="Edit" aria-label="Edit report">

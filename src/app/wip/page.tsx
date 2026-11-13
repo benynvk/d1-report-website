@@ -84,7 +84,7 @@ export default function WipPage() {
         r.missingPrevEvening.length && `previous evening: ${r.missingPrevEvening.join(', ')}`,
         r.missingToday.length && `this morning: ${r.missingToday.join(', ')}`,
       ].filter(Boolean);
-      setNotice(parts.length ? `Reminder sent — ${parts.join(' · ')}` : 'Everyone has filled their WIP — nothing sent.');
+      setNotice(parts.length ? `Reminder sent - ${parts.join(' · ')}` : 'Everyone has filled their WIP - nothing sent.');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -157,7 +157,7 @@ export default function WipPage() {
           </div>
         ) : day.rows.length === 0 ? (
           <div className="empty">
-            No tab for this day — weekend or holiday?
+            No tab for this day - weekend or holiday?
             {day.availableTabs && day.availableTabs.length > 0 && (
               <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
                 Tabs in this sheet: {day.availableTabs.join(', ')}
