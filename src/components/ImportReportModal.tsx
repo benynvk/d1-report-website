@@ -558,7 +558,6 @@ export function ImportReportModal({
               <button className="btn ghost sm" onClick={copyPrevious} disabled={copying}>
                 {copying && <Spinner sm />} Copy previous day
               </button>
-              <span className="muted task-tools-tip">Tip: paste several links at once · Enter adds a row</span>
             </div>
 
             {boardOpen && (
