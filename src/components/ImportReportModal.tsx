@@ -1,169 +1,152 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Select } from './Select';
 import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 import { ReportDateField } from './ReportDateField';
-import { formatDate, formatHours } from '@/lib/format';
-import type { Member, MemberRole, ReportConfig, WipSyncResult } from '@/lib/types';
+import { CloseIcon } from './icons';
+import { addDays, formatDate, formatDayLong, formatHours, todayVN } from '@/lib/format';
+import type { DailyReport, Member, MemberRole, ReportConfig, WipSyncResult } from '@/lib/types';
 
-function today(): string {
-  return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-}
-
-type EntryType = 'teamwork' | 'other';
-
+/**
+ * One task line. `text` is either a Teamwork task link or the name of a
+ * no-link task type (Weekly meeting, Review code…) — which one is inferred
+ * from the text, so there's no separate "type" to pick.
+ */
 interface RowState {
   key: string;
-  type: EntryType;
-  link: string;
-  otherTask: string;
+  text: string;
   note: string;
   hours: string;
-  /** Ticked = not finished that day; the WIP summary reports it as
-   * "In progress" instead of "Done". */
+  /** Not finished that day — the WIP summary says "In progress", not "Done". */
   inProgress: boolean;
-  /** Resolved Teamwork task title, previewed in place of the raw link once
-   * known. undefined = not looked up yet; null = looked up, not found. */
+  /** Teamwork title for a link: undefined = not looked up, null = not found. */
   previewTitle?: string | null;
-  /** True while resolving the title after the link input blurs. */
   previewLoading?: boolean;
 }
 
-function makeRow(): RowState {
-  return {
-    key: crypto.randomUUID(),
-    type: 'teamwork',
-    link: '',
-    otherTask: '',
-    note: '',
-    hours: '',
-    inProgress: false,
-    previewTitle: undefined,
-    previewLoading: false,
-  };
+type BoardTask = { id: number; title: string; url: string; stage: string | null; priority: string | null };
+
+/** What the Reports page shows after the form closes. */
+export interface ImportResult {
+  message: string;
+  warning?: string;
 }
 
-/** A row counts as "touched" once any field has content - used to tell an
- * intentionally-filled-in row from a still-blank spare one. */
-function isRowTouched(r: RowState): boolean {
-  return !!r.link.trim() || !!r.otherTask.trim() || !!r.note.trim() || !!r.hours.trim();
+const makeRow = (patch: Partial<RowState> = {}): RowState => ({
+  key: crypto.randomUUID(),
+  text: '',
+  note: '',
+  hours: '',
+  inProgress: false,
+  ...patch,
+});
+
+const isLink = (text: string) => /^https?:\/\//i.test(text.trim());
+const isBlank = (r: RowState) => !r.text.trim() && !r.note.trim() && !r.hours.trim();
+
+/**
+ * The canonical ".../app/tasks/<id>" URL for a Teamwork task link on the
+ * configured domain (also accepts the older "/#/tasks/<id>" form), or null.
+ */
+function canonicalTeamworkLink(link: string, prefix?: string): string | null {
+  if (!prefix || !link.startsWith(prefix)) return null;
+  const id = /^\/?(?:#\/|app\/)?tasks\/(\d+)(?:[/?#]|$)/.exec(link.slice(prefix.length).replace(/^\//, ''))?.[1];
+  return id ? `${prefix.replace(/\/$/, '')}/app/tasks/${id}` : null;
+}
+
+/** The configured task type a typed name refers to (case-insensitive). */
+const taskTypeOf = (text: string, allowed: string[]) =>
+  allowed.find((t) => t.toLowerCase() === text.trim().toLowerCase()) ?? null;
+
+/** Why a row can't be saved, or null when it's fine (or still blank). */
+function rowError(r: RowState, config: ReportConfig | null): string | null {
+  if (isBlank(r)) return null;
+  if (r.hours.trim()) {
+    const h = parseFloat(r.hours);
+    if (Number.isNaN(h) || h <= 0) return 'Hours must be a positive number.';
+  }
+  const text = r.text.trim();
+  if (!text) return 'Paste a Teamwork task link or pick a task type.';
+  if (isLink(text)) {
+    return canonicalTeamworkLink(text, config?.taskUrlPrefix) ? null : 'Not a Teamwork task link (…/app/tasks/123).';
+  }
+  if (!config) return null;
+  return taskTypeOf(text, config.noUrlAllowedTasks)
+    ? null
+    : `"${text}" needs a Teamwork link - or pick a task type: ${config.noUrlAllowedTasks.join(', ')}.`;
+}
+
+/** The row as the API stores it ("<type> - <note>" for no-link tasks). */
+function rowToEntry(r: RowState, config: ReportConfig | null) {
+  const hours = parseFloat(r.hours) || 0;
+  const note = r.note.trim();
+  const text = r.text.trim();
+  if (isLink(text)) {
+    return { href: canonicalTeamworkLink(text, config?.taskUrlPrefix) ?? text, taskName: note, hours, inProgress: r.inProgress };
+  }
+  const type = taskTypeOf(text, config?.noUrlAllowedTasks ?? []) ?? text;
+  return { taskName: note ? `${type} - ${note}` : type, hours, inProgress: r.inProgress };
+}
+
+/** The human-readable record kept as the report's raw text. */
+const entryLine = (e: ReturnType<typeof rowToEntry>) =>
+  `${'href' in e ? e.href : ''}${'href' in e && e.taskName ? ' - ' : ''}${e.taskName}: ${e.hours || 0}`;
+
+/** Saved entries back into rows (no-link tasks split into type + note). */
+function rowsFromReport(report: DailyReport, allowed: string[], keepHours: boolean): RowState[] {
+  return report.entries.map((e) => {
+    const hours = keepHours && e.hours ? String(e.hours) : '';
+    if (e.href) {
+      return makeRow({
+        text: e.href,
+        note: (e.taskName ?? '').trim().replace(/^[-–]\s*/, ''),
+        hours,
+        inProgress: keepHours ? e.inProgress : false,
+        previewTitle: e.resolvedTitle ?? null,
+      });
+    }
+    const type = allowed.find((t) => e.taskName === t || e.taskName.startsWith(`${t} - `));
+    return makeRow({
+      text: type ?? e.taskName,
+      note: type && e.taskName !== type ? e.taskName.slice(type.length + 3) : '',
+      hours,
+      inProgress: keepHours ? e.inProgress : false,
+    });
+  });
+}
+
+/** The WIP-sheet part of the success message (a failure becomes a warning). */
+function wipNote(sync?: WipSyncResult): string {
+  if (!sync || sync.error) return '';
+  if (sync.updated) return ` WIP sheet updated (${sync.column === 'evening' ? 'evening' : 'morning'}).`;
+  return '';
+}
+
+const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = { full_time: 7, part_time: 3.5 };
+const LEAVE_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: 'Working' },
+  { value: 2, label: 'Leave 2h' },
+  { value: 4, label: 'Leave 4h' },
+  { value: 8, label: 'Full day off' },
+];
+const LAST_MEMBER_KEY = 'd1-report:lastMemberId';
+const round = (h: number) => Math.round(h * 100) / 100;
+
+function lastMemberId(): string {
+  try {
+    return localStorage.getItem(LAST_MEMBER_KEY) ?? '';
+  } catch {
+    return '';
+  }
 }
 
 /**
- * The canonical task URL (".../app/tasks/<id>") for a Teamwork task link, or
- * null if it isn't one. Must be on the configured domain; accepts the current
- * "/app/tasks/<id>" form as well as the older "/#/tasks/<id>" and bare
- * "/tasks/<id>" ones (with or without a trailing path or query).
+ * Add / edit a member's report for a day. Prefilled with whatever is already
+ * saved for that member and day, so saving replaces it knowingly.
  */
-function canonicalTeamworkLink(link: string, taskUrlPrefix?: string): string | null {
-  if (!taskUrlPrefix || !link.startsWith(taskUrlPrefix)) return null;
-  const id = /^\/?(?:#\/|app\/)?tasks\/(\d+)(?:[/?#]|$)/.exec(link.slice(taskUrlPrefix.length).replace(/^\//, ''))?.[1];
-  return id ? `${taskUrlPrefix.replace(/\/$/, '')}/app/tasks/${id}` : null;
-}
-
-function isValidTeamworkLink(link: string, taskUrlPrefix?: string): boolean {
-  return canonicalTeamworkLink(link, taskUrlPrefix) !== null;
-}
-
-/** The link to save/send: canonical when it's a Teamwork task, else as typed. */
-function linkOf(r: RowState, taskUrlPrefix?: string): string {
-  const link = r.link.trim();
-  return canonicalTeamworkLink(link, taskUrlPrefix) ?? link;
-}
-
-/** Hours are optional: a report filed at the start of the day lists what the
- * member plans to work on and has no hours yet. When filled in, it still has
- * to be a positive number. */
-function isRowValid(r: RowState, taskUrlPrefix?: string): boolean {
-  if (r.hours.trim()) {
-    const hours = parseFloat(r.hours);
-    if (Number.isNaN(hours) || hours <= 0) return false;
-  }
-  if (r.type === 'teamwork') return isValidTeamworkLink(r.link.trim(), taskUrlPrefix);
-  return !!r.otherTask.trim();
-}
-
-/** Serializes a valid row into the "<link or task>: <hours>" line the
- * backend's report-text parser already understands. A note (if any) rides
- * along in the task-name text ("<link/task> - <note>") - there's no
- * dedicated note column server-side, so it round-trips through taskName.
- * Blank hours go out as 0: the parser only recognises a task line by its
- * trailing number, and 0 is how "no hours yet" is stored (the column is
- * NOT NULL), which reads back as an empty input. */
-function rowToLine(r: RowState, taskUrlPrefix?: string): string {
-  const base = r.type === 'teamwork' ? linkOf(r, taskUrlPrefix) : r.otherTask.trim();
-  const label = r.note.trim() ? `${base} - ${r.note.trim()}` : base;
-  return `${label}: ${r.hours.trim() || '0'}`;
-}
-
-/** The row as the API stores it. Mirrors what the text parser would have
- * produced (link + note for Teamwork tasks, "<task> - <note>" otherwise) and
- * adds the in-progress flag, which the text format can't express. */
-function rowToEntry(r: RowState, taskUrlPrefix?: string) {
-  const hours = parseFloat(r.hours) || 0;
-  const note = r.note.trim();
-  if (r.type === 'teamwork') {
-    return { href: linkOf(r, taskUrlPrefix), taskName: note, hours, inProgress: r.inProgress };
-  }
-  const task = r.otherTask.trim();
-  return {
-    taskName: note ? `${task} - ${note}` : task,
-    hours,
-    inProgress: r.inProgress,
-  };
-}
-
-/** Recovers {otherTask, note} from a saved "other" entry's taskName. */
-function splitOtherTaskName(
-  taskName: string,
-  allowed: string[],
-): { otherTask: string; note: string } {
-  for (const opt of allowed) {
-    if (taskName === opt) return { otherTask: opt, note: '' };
-    if (taskName.startsWith(`${opt} - `)) {
-      return { otherTask: opt, note: taskName.slice(opt.length + 3) };
-    }
-  }
-  return { otherTask: taskName, note: '' };
-}
-
-/** Recovers the note (if any) from a saved Teamwork entry's taskName. */
-function splitTeamworkNote(taskName: string): string {
-  return (taskName ?? '').trim().replace(/^[-–]\s*/, '');
-}
-
-/** Tail of the success message describing what happened to the WIP sheet.
- * A failed write is left out here - it gets its own warning banner. */
-function wipNote(sync?: WipSyncResult): string {
-  if (!sync || sync.error) return '';
-  if (sync.updated) {
-    const when = sync.column === 'evening' ? 'Evening' : 'Morning';
-    return ` WIP sheet updated (${when}, ${formatDate(sync.date)}).`;
-  }
-  return sync.skipped ? ` WIP sheet not updated - ${sync.skipped}.` : '';
-}
-
-const HOUR_THRESHOLD: Partial<Record<MemberRole, number>> = {
-  full_time: 7,
-  part_time: 3.5,
-};
-
-const LEAVE_HOUR_OPTIONS = [2, 4, 8] as const;
-
-const LAST_MEMBER_KEY = 'd1-report:lastMemberId';
-
-/** Reads the last-selected member so the modal opens pre-filled for the
- * common case of the same person logging reports each time. */
-function getLastMemberId(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem(LAST_MEMBER_KEY) ?? '';
-}
-
-/** Popup: build a structured task list for a member/day, prefilled with
- * whatever is already saved so re-saving intentionally overwrites it. */
 export function ImportReportModal({
   onClose,
   onImported,
@@ -171,111 +154,70 @@ export function ImportReportModal({
   initialDate,
 }: {
   onClose: () => void;
-  onImported: () => void;
-  /** Pre-fills for editing a specific member/day's report (e.g. from the
-   * Reports list's Edit button) instead of the last-selected member/today. */
+  /** Called after a save, just before the form closes. */
+  onImported: (result: ImportResult) => void;
   initialMemberId?: string;
   initialDate?: string;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
-  const [membersLoading, setMembersLoading] = useState(true);
   const [config, setConfig] = useState<ReportConfig | null>(null);
-  const [memberId, setMemberId] = useState<string>(() => initialMemberId || getLastMemberId());
-  const [date, setDate] = useState(initialDate || today());
+  const [memberId, setMemberId] = useState(() => initialMemberId || lastMemberId());
+  const [date, setDate] = useState(initialDate || todayVN());
   const [rows, setRows] = useState<RowState[]>([makeRow()]);
+  const [existing, setExisting] = useState(false);
   const [leaveHours, setLeaveHours] = useState<number | null>(null);
-  const [hadExistingLeave, setHadExistingLeave] = useState(false);
-  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [hadLeave, setHadLeave] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [warn, setWarn] = useState('');
   const [saving, setSaving] = useState(false);
-  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
-
-  const selectMember = (id: string) => {
-    setMemberId(id);
-    if (typeof window === 'undefined') return;
-    if (id) localStorage.setItem(LAST_MEMBER_KEY, id);
-    else localStorage.removeItem(LAST_MEMBER_KEY);
-  };
+  const [board, setBoard] = useState<BoardTask[] | null>(null);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api
-      .listMembers()
-      .then(setMembers)
-      .catch((e) => setError(e.message))
-      .finally(() => setMembersLoading(false));
+    api.listMembers().then(setMembers).catch((e) => setError(e.message));
     api.reportConfig().then(setConfig).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const selectMember = (id: string) => {
+    setMemberId(id);
+    setBoard(null);
+    setBoardOpen(false);
+    try {
+      if (id) localStorage.setItem(LAST_MEMBER_KEY, id);
+    } catch {
+      /* private mode */
+    }
+  };
 
-  // Load whatever is already saved for this member/day so save intentionally
-  // overwrites it rather than silently clobbering unseen data. Waits on
-  // `config` so "other task" rows can be split back into task + note.
+  // Load what's already saved for this member/day (waits for config so
+  // no-link tasks split back into type + note).
   useEffect(() => {
     if (!memberId || !date) {
       setRows([makeRow()]);
+      setExisting(false);
       setLeaveHours(null);
-      setHadExistingLeave(false);
+      setHadLeave(false);
       return;
     }
     let cancelled = false;
-    setLoadingExisting(true);
-    Promise.all([
-      api.listReports({ date, memberId }),
-      api.listAttendance({ date }),
-    ])
+    setLoading(true);
+    Promise.all([api.listReports({ date, memberId }), api.listAttendance({ date })])
       .then(([reports, attendance]) => {
         if (cancelled) return;
-        const already = attendance.find((a) => a.member.id === memberId);
-        const isLeave = already?.status === 'holiday';
-        setHadExistingLeave(isLeave);
-        setLeaveHours(isLeave ? already?.hours ?? 8 : null);
-
-        const allowed = config?.noUrlAllowedTasks ?? [];
+        const leave = attendance.find((a) => a.member.id === memberId && a.status === 'holiday');
+        setHadLeave(!!leave);
+        setLeaveHours(leave ? (leave.hours ?? 8) : null);
         const report = reports[0];
-        if (report && report.entries.length > 0) {
-          setRows(
-            report.entries.map((e) => {
-              if (e.href) {
-                return {
-                  key: crypto.randomUUID(),
-                  type: 'teamwork' as const,
-                  link: e.href,
-                  otherTask: '',
-                  note: splitTeamworkNote(e.taskName),
-                  hours: e.hours ? String(e.hours) : '',
-                  inProgress: e.inProgress,
-                  previewTitle: e.resolvedTitle ?? null,
-                };
-              }
-              const { otherTask, note } = splitOtherTaskName(e.taskName, allowed);
-              return {
-                key: crypto.randomUUID(),
-                type: 'other' as const,
-                link: '',
-                otherTask,
-                note,
-                hours: e.hours ? String(e.hours) : '',
-                inProgress: e.inProgress,
-              };
-            }),
-          );
-        } else {
-          setRows([makeRow()]);
-        }
+        setExisting(!!report?.entries.length);
+        setRows(report?.entries.length ? [...rowsFromReport(report, config?.noUrlAllowedTasks ?? [], true), makeRow()] : [makeRow()]);
       })
-      .catch(() => {
-        if (!cancelled) setRows([makeRow()]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingExisting(false);
-      });
+      .catch(() => !cancelled && setRows([makeRow()]))
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
@@ -283,401 +225,395 @@ export function ImportReportModal({
 
   const updateRow = (key: string, patch: Partial<RowState>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-
   const removeRow = (key: string) =>
-    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
+    setRows((rs) => {
+      const next = rs.filter((r) => r.key !== key);
+      return next.length ? next : [makeRow()];
+    });
 
-  const resolveLinkPreview = async (key: string, url: string) => {
-    const trimmed = url.trim();
-    if (!trimmed) {
-      updateRow(key, { previewTitle: undefined });
-      return;
-    }
+  /** Puts new rows in place of trailing blank ones, keeping one spare at the end. */
+  const addRows = (added: RowState[]) =>
+    setRows((rs) => {
+      let end = rs.length;
+      while (end > 0 && isBlank(rs[end - 1])) end--;
+      return [...rs.slice(0, end), ...added, makeRow()];
+    });
+
+  const resolvePreview = async (key: string, text: string) => {
+    if (!isLink(text)) return;
     updateRow(key, { previewLoading: true });
     try {
-      const { title } = await api.resolveTaskTitle(trimmed);
+      const { title } = await api.resolveTaskTitle(text.trim());
       updateRow(key, { previewTitle: title, previewLoading: false });
     } catch {
       updateRow(key, { previewTitle: null, previewLoading: false });
     }
   };
 
-  const touchedRows = rows.filter(isRowTouched);
-  const incompleteRows = touchedRows.filter((r) => !isRowValid(r, config?.taskUrlPrefix));
-  const validRows = touchedRows.filter((r) => isRowValid(r, config?.taskUrlPrefix));
-  const totalHours =
-    Math.round(validRows.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0) * 100) / 100;
-  /** No hours anywhere = a plan for the day, not a short workday. */
-  const anyHoursEntered = validRows.some((r) => r.hours.trim());
+  /** Pasting several lines/links creates one row per line. */
+  const onPasteTask = (r: RowState, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const lines = e.clipboardData
+      .getData('text')
+      .split(/\r?\n|\s+(?=https?:\/\/)/)
+      .map((l) => l.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '').trim())
+      .filter(Boolean);
+    if (lines.length < 2) return;
+    e.preventDefault();
+    const created = lines.map((text) => makeRow({ text }));
+    setRows((rs) => {
+      const i = rs.findIndex((x) => x.key === r.key);
+      const head = rs.slice(0, i);
+      const tail = rs.slice(i + 1).filter((x) => !isBlank(x));
+      const first = { ...created[0], key: r.key, note: r.note, hours: r.hours, inProgress: r.inProgress };
+      return [...head, first, ...created.slice(1), ...tail, makeRow()];
+    });
+    [{ ...created[0], key: r.key }, ...created.slice(1)].forEach((x) => resolvePreview(x.key, x.text));
+  };
 
-  const selectedMember = members.find((m) => m.id === memberId);
-  const baseThreshold = selectedMember ? HOUR_THRESHOLD[selectedMember.role] : undefined;
-  // Leave hours count toward the day, so a partial leave lowers how much
-  // work is still expected (e.g. full-time 7h base - 4h leave = 3h).
-  const threshold =
-    baseThreshold != null ? Math.max(0, baseThreshold - (leaveHours ?? 0)) : undefined;
-  const underThreshold = anyHoursEntered && threshold != null && totalHours < threshold;
-  const fullDayOff = leaveHours === 8;
+  const focusRow = (key: string) =>
+    requestAnimationFrame(() => formRef.current?.querySelector<HTMLInputElement>(`[data-row="${key}"]`)?.focus());
 
-  const canSubmit = useMemo(() => {
-    if (!memberId || saving) return false;
-    if (fullDayOff) return true;
-    if (incompleteRows.length > 0) return false;
-    return validRows.length > 0 || leaveHours != null;
-  }, [memberId, saving, fullDayOff, incompleteRows.length, validRows.length, leaveHours]);
-
-  const submit = async () => {
-    setError('');
-    setOk('');
-    setWarn('');
-    if (!memberId) {
-      setError('Select a member.');
-      return;
-    }
-    if (!fullDayOff) {
-      if (incompleteRows.length > 0) {
-        setError('Complete or remove the highlighted rows first.');
-        return;
-      }
-      if (validRows.length === 0 && leaveHours == null) {
-        setError('Add at least one task.');
-        return;
-      }
-    }
-    setSaving(true);
-    try {
-      if (leaveHours != null) {
-        await api.setAttendance(memberId, date, 'holiday', leaveHours);
-      } else if (hadExistingLeave) {
-        await api.setAttendance(memberId, date, 'none');
-      }
-      const who = members.find((m) => m.id === memberId)?.name ?? 'Member';
-      if (fullDayOff) {
-        setOk(`Marked ${who} on holiday for ${formatDate(date)}.`);
-      } else if (validRows.length > 0) {
-        const text = validRows.map((r) => rowToLine(r, config?.taskUrlPrefix)).join('\n');
-        const report = await api.importReport({
-          memberId,
-          date,
-          text,
-          entries: validRows.map((r) => rowToEntry(r, config?.taskUrlPrefix)),
-        });
-        const total = report.entries.reduce((s, e) => s + e.hours, 0);
-        setOk(
-          `Saved ${report.entries.length} tasks` +
-            (total ? ` (${formatHours(total)})` : '') +
-            (leaveHours ? ` + ${leaveHours}h leave` : '') +
-            ` for ${report.member.name} on ${formatDate(report.date)}.` +
-            wipNote(report.wipSync),
-        );
-        // A sheet that couldn't be written is worth flagging on its own - the
-        // report is saved either way, so it isn't an error.
-        if (report.wipSync?.error) {
-          setWarn(
-            `The report is saved, but the WIP sheet was not updated: ${report.wipSync.error}`,
-          );
-        }
-      } else {
-        setOk(`Saved ${leaveHours}h leave for ${who} on ${formatDate(date)}.`);
-      }
-      setCalendarRefreshKey((k) => k + 1);
-      onImported();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
+  /** Enter on the last row adds a row and moves to it. */
+  const onRowKey = (r: RowState, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    const last = rows[rows.length - 1];
+    if (last.key === r.key) {
+      const fresh = makeRow();
+      setRows((rs) => [...rs, fresh]);
+      focusRow(fresh.key);
+    } else {
+      focusRow(rows[rows.findIndex((x) => x.key === r.key) + 1].key);
     }
   };
 
+  const toggleBoard = async () => {
+    if (boardOpen) return setBoardOpen(false);
+    setBoardOpen(true);
+    if (board || !memberId) return;
+    setBoardLoading(true);
+    try {
+      setBoard(await api.memberTeamworkTasks(memberId));
+    } catch (e: any) {
+      setError(e.message);
+      setBoardOpen(false);
+    } finally {
+      setBoardLoading(false);
+    }
+  };
+
+  const copyPrevious = async () => {
+    setError('');
+    setCopying(true);
+    try {
+      const prev = (await api.listReports({ memberId, from: addDays(date, -31), to: addDays(date, -1) }))[0];
+      if (!prev) {
+        setError('No earlier report in the last month to copy.');
+        return;
+      }
+      const have = new Set(rows.map((r) => r.text.trim().toLowerCase()));
+      addRows(rowsFromReport(prev, config?.noUrlAllowedTasks ?? [], false).filter((r) => !have.has(r.text.trim().toLowerCase())));
+      setOk(`Copied the tasks from ${formatDayLong(prev.date)} - fill in today's hours.`);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  // ---------- Derived ----------
+  const filled = rows.filter((r) => !isBlank(r));
+  const errors = new Map(filled.map((r) => [r.key, rowError(r, config)]));
+  const hasErrors = [...errors.values()].some(Boolean);
+  const totalHours = round(filled.reduce((s, r) => s + (parseFloat(r.hours) || 0), 0));
+  const anyHours = filled.some((r) => r.hours.trim());
+  const member = members.find((m) => m.id === memberId);
+  const baseThreshold = member ? HOUR_THRESHOLD[member.role] : undefined;
+  // Leave counts toward the day: full-time 7h - 4h leave = 3h still expected.
+  const threshold = baseThreshold != null ? Math.max(0, baseThreshold - (leaveHours ?? 0)) : undefined;
+  const fullDayOff = leaveHours === 8;
+  const added = new Set(rows.map((r) => canonicalTeamworkLink(r.text.trim(), config?.taskUrlPrefix)).filter(Boolean));
+  const canSave = !!memberId && !saving && (fullDayOff || (!hasErrors && (filled.length > 0 || leaveHours != null)));
+
+  const submit = useCallback(
+    async () => {
+      if (!canSave) return;
+      setError('');
+      setOk('');
+      setWarn('');
+      setSaving(true);
+      try {
+        if (leaveHours != null) await api.setAttendance(memberId, date, 'holiday', leaveHours);
+        else if (hadLeave) await api.setAttendance(memberId, date, 'none');
+        const who = member?.name ?? 'Member';
+        let result: ImportResult;
+        if (fullDayOff) {
+          result = { message: `${who} is off on ${formatDate(date)}.` };
+        } else if (filled.length) {
+          const entries = filled.map((r) => rowToEntry(r, config));
+          const report = await api.importReport({ memberId, date, text: entries.map(entryLine).join('\n'), entries });
+          const total = report.entries.reduce((s, e) => s + e.hours, 0);
+          result = {
+            message:
+              `Saved ${report.entries.length} task${report.entries.length === 1 ? '' : 's'}` +
+              (total ? ` (${formatHours(total)})` : '') +
+              (leaveHours ? ` + ${leaveHours}h leave` : '') +
+              ` for ${who} on ${formatDate(date)}.` +
+              wipNote(report.wipSync),
+            warning: report.wipSync?.error ? `The WIP sheet was not updated: ${report.wipSync.error}` : undefined,
+          };
+        } else {
+          result = { message: `Saved ${leaveHours}h leave for ${who} on ${formatDate(date)}.` };
+        }
+        onImported(result);
+        onClose();
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canSave, leaveHours, hadLeave, memberId, date, member, fullDayOff, filled, config],
+  );
+
+  // Esc closes, Cmd/Ctrl+Enter saves.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        submit();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, submit]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-lg-head" style={{ justifyContent: 'center' }}>
-          <h3 style={{ margin: 0 }}>Add report</h3>
+      <div className="modal modal-xl report-form" onClick={(e) => e.stopPropagation()} ref={formRef}>
+        <div className="report-form-head">
+          <div>
+            <h3>{existing ? 'Edit report' : 'Add report'}</h3>
+            {existing && member && (
+              <p className="muted">Saving replaces {member.name}&apos;s report for {formatDayLong(date)}.</p>
+            )}
+          </div>
+          <button className="icon-only" onClick={onClose} aria-label="Close" title="Close (Esc)">
+            <CloseIcon size={18} />
+          </button>
         </div>
 
         {error && <div className="alert error">{error}</div>}
         {ok && <div className="alert ok">{ok}</div>}
         {warn && <div className="alert warn">{warn}</div>}
 
-        <div className="field-row">
-          <div className="field" style={{ flex: 1, minWidth: 0 }}>
-            <label>Member</label>
-            {membersLoading ? (
-              <div className="select-btn" style={{ cursor: 'default', gap: 8 }}>
-                <Spinner sm /> Loading members…
-              </div>
-            ) : (
-              <Select
-                value={memberId}
-                onChange={selectMember}
-                placeholder="Select member"
-                options={members.map((m) => ({
-                  value: m.id,
-                  label: `${m.name} (${m.email})`,
-                  icon: <Avatar name={m.name} src={m.avatarUrl} size={20} />,
-                }))}
-              />
-            )}
+        <div className="report-form-who">
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <Select
+              value={memberId}
+              onChange={selectMember}
+              placeholder="Select member"
+              options={members.map((m) => ({
+                value: m.id,
+                label: m.name,
+                icon: <Avatar name={m.name} src={m.avatarUrl} size={20} />,
+              }))}
+            />
           </div>
-          <div className="field" style={{ flexShrink: 0 }}>
-            <label>Date</label>
-            <div>
-              <ReportDateField
-                value={date}
-                onChange={setDate}
-                memberId={memberId}
-                baseThreshold={baseThreshold}
-                refreshKey={calendarRefreshKey}
-              />
-            </div>
+          <ReportDateField
+            value={date}
+            onChange={setDate}
+            memberId={memberId}
+            baseThreshold={baseThreshold}
+          />
+          <div className="preset-group" role="radiogroup" aria-label="Leave">
+            {LEAVE_OPTIONS.map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                role="radio"
+                aria-checked={leaveHours === o.value}
+                className={`preset-btn${leaveHours === o.value ? ' active' : ''}`}
+                onClick={() => setLeaveHours(o.value)}
+                disabled={!memberId}
+              >
+                {o.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {loadingExisting ? (
+        {!memberId ? (
+          <div className="empty sm">Chọn profile của bạn</div>
+        ) : loading ? (
           <Loading />
+        ) : fullDayOff ? (
+          <div className="empty sm">Full day off - no tasks needed.</div>
         ) : (
-          <div
-            style={{
-              opacity: memberId ? 1 : 0.45,
-              pointerEvents: memberId ? 'auto' : 'none',
-              transition: 'opacity 150ms',
-            }}
-          >
-            <div className="field-row" style={{ alignItems: 'center', marginBottom: 14 }}>
-              <label className="checkbox-row" style={{ margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={leaveHours != null}
-                  onChange={(e) => setLeaveHours(e.target.checked ? 8 : null)}
-                />
-                <span>Leave/Holiday</span>
-              </label>
-              <div
-                style={{ width: 160, visibility: leaveHours != null ? 'visible' : 'hidden' }}
-              >
-                <Select
-                  value={String(leaveHours ?? 8)}
-                  onChange={(v) => setLeaveHours(Number(v))}
-                  options={LEAVE_HOUR_OPTIONS.map((h) => ({
-                    value: String(h),
-                    label: `${h}h${h === 8 ? ' (full day)' : ''}`,
-                  }))}
-                />
+          <>
+            <datalist id="task-types">
+              {(config?.noUrlAllowedTasks ?? []).map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+
+            <div className="task-rows">
+              <div className="task-row task-row-head">
+                <span>Task</span>
+                <span>Note</span>
+                <span className="r">Hours</span>
+                <span className="c" title="Not finished on this day">
+                  In progress
+                </span>
+                <span />
               </div>
+              {rows.map((r) => {
+                const err = errors.get(r.key);
+                const link = isLink(r.text);
+                return (
+                  <div key={r.key} className={`task-row${err ? ' has-error' : ''}`}>
+                    <div className="task-cell">
+                      {link && r.previewTitle ? (
+                        <div className="link-preview">
+                          <a href={r.text} target="_blank" rel="noreferrer" className="link-preview-title" title={r.text}>
+                            {r.previewTitle}
+                          </a>
+                          <button
+                            type="button"
+                            className="icon-only"
+                            onClick={() => {
+                              updateRow(r.key, { text: '', previewTitle: undefined });
+                              focusRow(r.key);
+                            }}
+                            title="Change"
+                            aria-label="Change task"
+                          >
+                            <CloseIcon />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="input-wrap">
+                          <input
+                            data-row={r.key}
+                            value={r.text}
+                            list={link ? undefined : 'task-types'}
+                            onChange={(e) => updateRow(r.key, { text: e.target.value, previewTitle: undefined })}
+                            onBlur={(e) => resolvePreview(r.key, e.target.value)}
+                            onPaste={(e) => onPasteTask(r, e)}
+                            onKeyDown={(e) => onRowKey(r, e)}
+                            placeholder="Paste a Teamwork link, or pick a task type"
+                          />
+                          {r.previewLoading && <Spinner sm />}
+                        </div>
+                      )}
+                      {err && <div className="row-error">{err}</div>}
+                    </div>
+                    <input
+                      value={r.note}
+                      onChange={(e) => updateRow(r.key, { note: e.target.value })}
+                      onKeyDown={(e) => onRowKey(r, e)}
+                      placeholder="Optional note"
+                    />
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      inputMode="decimal"
+                      placeholder="-"
+                      value={r.hours}
+                      onChange={(e) => updateRow(r.key, { hours: e.target.value })}
+                      onKeyDown={(e) => onRowKey(r, e)}
+                      className="r"
+                    />
+                    <label className="c switch-cell" title="Not finished on this day">
+                      <input
+                        type="checkbox"
+                        checked={r.inProgress}
+                        onChange={(e) => updateRow(r.key, { inProgress: e.target.checked })}
+                      />
+                    </label>
+                    <button
+                      className="icon-only danger"
+                      onClick={() => removeRow(r.key)}
+                      title="Remove"
+                      aria-label="Remove task"
+                      disabled={rows.length === 1 && isBlank(r)}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
-            {
-              <div
-                style={{
-                  opacity: fullDayOff ? 0.45 : 1,
-                  pointerEvents: fullDayOff ? 'none' : 'auto',
-                  transition: 'opacity 150ms',
-                }}
-              >
-                <div className="table-frame">
-                  <table className="report-table">
-                    {/* Link/Task is the only width-less column: with
-                        table-layout: fixed it takes whatever the others
-                        leave, so a long task name can't squeeze them. */}
-                    <colgroup>
-                      <col style={{ width: 130 }} />
-                      <col />
-                      <col style={{ width: 170 }} />
-                      <col style={{ width: 80 }} />
-                      <col style={{ width: 104 }} />
-                      <col style={{ width: 44 }} />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Link / Task</th>
-                        <th>Note</th>
-                        <th>Hours</th>
-                        <th>In progress</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((r) => {
-                        const invalid =
-                          isRowTouched(r) && !isRowValid(r, config?.taskUrlPrefix);
-                        return (
-                          <tr key={r.key} className={invalid ? 'invalid-row' : ''}>
-                            <td>
-                              <Select
-                                value={r.type}
-                                onChange={(v) =>
-                                  updateRow(r.key, {
-                                    type: v as EntryType,
-                                    link: '',
-                                    otherTask: '',
-                                  })
-                                }
-                                options={[
-                                  { value: 'teamwork', label: 'Teamwork' },
-                                  { value: 'other', label: 'Other task' },
-                                ]}
-                              />
-                            </td>
-                            <td>
-                              {r.type === 'teamwork' ? (
-                                r.previewTitle ? (
-                                  <div className="link-preview">
-                                    <a
-                                      href={r.link}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="link-preview-title"
-                                      title={`${r.previewTitle}\n${r.link}`}
-                                    >
-                                      {r.previewTitle}
-                                    </a>
-                                    <button
-                                      type="button"
-                                      className="btn ghost row-remove-btn"
-                                      onClick={() =>
-                                        updateRow(r.key, { link: '', previewTitle: undefined })
-                                      }
-                                      title="Clear"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div style={{ position: 'relative' }}>
-                                    <input
-                                      value={r.link}
-                                      onChange={(e) =>
-                                        updateRow(r.key, {
-                                          link: e.target.value,
-                                          previewTitle: undefined,
-                                        })
-                                      }
-                                      onBlur={(e) => resolveLinkPreview(r.key, e.target.value)}
-                                      placeholder={
-                                        config
-                                          ? `${config.taskUrlPrefix}/app/tasks/101`
-                                          : 'Teamwork task link'
-                                      }
-                                      style={{ width: '100%', paddingRight: 32 }}
-                                    />
-                                    {r.previewLoading && (
-                                      <span
-                                        style={{
-                                          position: 'absolute',
-                                          right: 11,
-                                          top: '50%',
-                                          transform: 'translateY(-50%)',
-                                        }}
-                                      >
-                                        <Spinner sm />
-                                      </span>
-                                    )}
-                                  </div>
-                                )
-                              ) : (
-                                <Select
-                                  value={r.otherTask}
-                                  onChange={(v) => updateRow(r.key, { otherTask: v })}
-                                  placeholder="Select task"
-                                  options={(config?.noUrlAllowedTasks ?? [])
-                                    .concat(
-                                      r.otherTask &&
-                                        !config?.noUrlAllowedTasks.includes(r.otherTask)
-                                        ? [r.otherTask]
-                                        : [],
-                                    )
-                                    .map((t) => ({ value: t, label: t }))}
-                                />
-                              )}
-                            </td>
-                            <td>
-                              <input
-                                value={r.note}
-                                onChange={(e) => updateRow(r.key, { note: e.target.value })}
-                                placeholder="Optional note"
-                                style={{ width: '100%' }}
-                              />
-                            </td>
-                            <td className="num">
-                              <input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                placeholder="-"
-                                value={r.hours}
-                                onChange={(e) => updateRow(r.key, { hours: e.target.value })}
-                                style={{ width: '100%', textAlign: 'right' }}
-                              />
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <input
-                                type="checkbox"
-                                checked={r.inProgress}
-                                onChange={(e) =>
-                                  updateRow(r.key, { inProgress: e.target.checked })
-                                }
-                                title="Not finished on this day"
-                              />
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                className="btn ghost row-remove-btn"
-                                onClick={() => removeRow(r.key)}
-                                disabled={rows.length === 1}
-                                title="Remove row"
-                              >
-                                ✕
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <button
-                  className="btn ghost sm"
-                  onClick={() => setRows((rs) => [...rs, makeRow()])}
-                  style={{ marginTop: 10 }}
-                >
-                  + Add task
-                </button>
+            <div className="task-tools">
+              <button className="btn ghost sm" onClick={() => addRows([makeRow()])}>
+                + Task
+              </button>
+              <button className={`btn ghost sm${boardOpen ? ' on' : ''}`} onClick={toggleBoard}>
+                From Teamwork
+              </button>
+              <button className="btn ghost sm" onClick={copyPrevious} disabled={copying}>
+                {copying && <Spinner sm />} Copy previous day
+              </button>
+              <span className="muted task-tools-tip">Tip: paste several links at once · Enter adds a row</span>
+            </div>
 
-                <div
-                  className="field-row"
-                  style={{ marginTop: 14, alignItems: 'center', justifyContent: 'space-between' }}
-                >
-                  <strong>Total: {formatHours(totalHours)}</strong>
-                  {underThreshold && selectedMember && (
-                    <span className="badge pending">
-                      ⚠ Below {threshold}h for{' '}
-                      {selectedMember.role === 'full_time' ? 'full-time' : 'part-time'}
-                    </span>
-                  )}
-                </div>
+            {boardOpen && (
+              <div className="board-picker">
+                {boardLoading ? (
+                  <Loading />
+                ) : !board?.length ? (
+                  <div className="empty sm">No open D1 tasks assigned to {member?.name}.</div>
+                ) : (
+                  board.map((t) => {
+                    const isAdded = added.has(t.url);
+                    return (
+                      <button
+                        key={t.id}
+                        className="board-item"
+                        disabled={isAdded}
+                        onClick={() => addRows([makeRow({ text: t.url, previewTitle: t.title })])}
+                      >
+                        <span className="board-item-title">{t.title}</span>
+                        {t.stage && <span className="badge gray">{t.stage}</span>}
+                        {t.priority && <span className={`prio prio-${t.priority}`}>{t.priority}</span>}
+                        <span className="board-item-add">{isAdded ? 'Added' : '+ Add'}</span>
+                      </button>
+                    );
+                  })
+                )}
               </div>
-            }
-          </div>
+            )}
+          </>
         )}
 
-        <button
-          className="btn block"
-          onClick={submit}
-          disabled={!canSubmit}
-          style={{ marginTop: 16 }}
-        >
-          {saving ? (
-            <span className="btn-spin">
-              <Spinner sm /> Saving…
-            </span>
-          ) : fullDayOff ? (
-            'Mark holiday'
-          ) : (
-            'Save report'
-          )}
-        </button>
+        <div className="report-form-foot">
+          <div className="report-form-total">
+            {!fullDayOff && memberId && (
+              <>
+                <strong>{formatHours(totalHours) === '-' ? '0h' : formatHours(totalHours)}</strong>
+                {!anyHours ? (
+                  <span className="muted">No hours yet.</span>
+                ) : threshold != null && totalHours < threshold ? (
+                  <span className="warn-text">
+                    {round(threshold - totalHours)}h short of {threshold}h
+                  </span>
+                ) : threshold != null ? (
+                  <span className="ok-text">Enough hours</span>
+                ) : null}
+              </>
+            )}
+          </div>
+          <button className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn" onClick={submit} disabled={!canSave} title="Save (Ctrl/⌘ + Enter)">
+            {saving && <Spinner sm />} {fullDayOff ? 'Mark day off' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   );

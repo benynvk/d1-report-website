@@ -15,6 +15,7 @@ import * as reports from './services/reports';
 import * as stats from './services/stats';
 import * as taskTypes from './services/task-types';
 import * as teamwork from './services/teamwork';
+import { rankTasks } from './services/auto-wip-rules';
 import * as wip from './services/wip';
 
 /** The HTTP API, mounted under /api. Handlers stay thin — logic lives in services/. */
@@ -62,6 +63,12 @@ const memberFields = {
 
 api.get('/members', async () => send(await members.findAll()));
 api.get('/members/:id', async (c) => send(await members.findOne(c.req.param('id'))));
+/** The member's open tasks on the D1 board, best first (Add report → From Teamwork). */
+api.get('/members/:id/teamwork-tasks', async (c) => {
+  const member = await members.findOne(c.req.param('id'));
+  const ranked = rankTasks(await teamwork.listBoardTasks(), members.teamworkEmailFor(member));
+  return send(ranked.slice(0, 15).map(({ id, title, url, stage, priority }) => ({ id, title, url, stage, priority })));
+});
 /** The member's avatar as an image. The URL carries a version, so cache it hard. */
 api.get('/members/:id/avatar', async (c) => {
   const image = await members.avatarImage(c.req.param('id'));

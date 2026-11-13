@@ -113,6 +113,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }).finally(invalidateMembersCache),
+  memberTeamworkTasks: (id: string) =>
+    request<{ id: number; title: string; url: string; stage: string | null; priority: string | null }[]>(
+      `/members/${id}/teamwork-tasks`,
+    ),
   deleteMember: (id: string) =>
     request<void>(`/members/${id}`, { method: 'DELETE' }).finally(invalidateMembersCache),
 

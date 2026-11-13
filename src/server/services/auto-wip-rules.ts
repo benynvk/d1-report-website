@@ -166,25 +166,36 @@ export function stageTier(stage: string | null): number | null {
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 /**
+ * Every open board task assigned to `email`, best first: by column tier
+ * (In progress/QA, Ready to start, the rest) then priority. Finished
+ * columns (Done/Deployed) are left out.
+ */
+export function rankTasks(tasks: BoardTask[], email: string): (BoardTask & { tier: number })[] {
+  return tasks
+    .filter((t) => t.assigneeEmails.some((e) => e.toLowerCase() === email.toLowerCase()))
+    .map((t, order) => ({ t, order, tier: stageTier(t.stage) }))
+    .filter((x): x is { t: BoardTask; order: number; tier: number } => x.tier !== null)
+    .sort(
+      (a, b) =>
+        a.tier - b.tier ||
+        (PRIORITY_RANK[a.t.priority ?? ''] ?? 3) - (PRIORITY_RANK[b.t.priority ?? ''] ?? 3) ||
+        a.order - b.order,
+    )
+    .map((x) => ({ ...x.t, tier: x.tier }));
+}
+
+/**
  * The member's D1 tasks for a morning WIP: only the best non-empty tier
  * (In progress/QA, else Ready to start, else any assigned), highest
  * priority first, at most MAX_PICKED_TASKS.
  */
 export function pickTasks(tasks: BoardTask[], email: string): BoardTask[] {
-  const mine = tasks
-    .filter((t) => t.assigneeEmails.some((e) => e.toLowerCase() === email.toLowerCase()))
-    .map((t, order) => ({ t, order, tier: stageTier(t.stage) }))
-    .filter((x): x is { t: BoardTask; order: number; tier: number } => x.tier !== null);
-  if (mine.length === 0) return [];
-  const best = Math.min(...mine.map((x) => x.tier));
-  return mine
-    .filter((x) => x.tier === best)
-    .sort(
-      (a, b) =>
-        (PRIORITY_RANK[a.t.priority ?? ''] ?? 3) - (PRIORITY_RANK[b.t.priority ?? ''] ?? 3) || a.order - b.order,
-    )
+  const ranked = rankTasks(tasks, email);
+  if (ranked.length === 0) return [];
+  return ranked
+    .filter((t) => t.tier === ranked[0].tier)
     .slice(0, MAX_PICKED_TASKS)
-    .map((x) => x.t);
+    .map(({ tier: _tier, ...t }) => t);
 }
 
 // ---------- Dates ----------

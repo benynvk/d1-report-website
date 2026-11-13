@@ -42,6 +42,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [visibleDays, setVisibleDays] = useState(DAYS_PAGE);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState<{ message: string; warning?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
   const [showWip, setShowWip] = useState(false);
@@ -87,10 +88,12 @@ export default function ReportsPage() {
   }, [days, visibleDays]);
 
   const openAdd = () => {
+    setNotice(null);
     setEditTarget(null);
     setShowImport(true);
   };
   const openEdit = (r: DailyReport) => {
+    setNotice(null);
     setEditTarget({ memberId: r.member.id, date: r.date });
     setShowImport(true);
   };
@@ -134,6 +137,8 @@ export default function ReportsPage() {
       </div>
 
       {error && <div className="alert error">{error}</div>}
+      {notice && <div className="alert ok">{notice.message}</div>}
+      {notice?.warning && <div className="alert warn">{notice.warning}</div>}
 
       <div className="panel">
         <div className="panel-head filter-head">
@@ -225,7 +230,7 @@ export default function ReportsPage() {
                         ))}
                       </ul>
                       <div className="report-row-total">
-                        {hours > 0 ? <strong>{formatHours(hours)}</strong> : <span className="muted" title="No hours yet - a plan for the day">Plan</span>}
+                        {hours > 0 ? <strong>{formatHours(hours)}</strong> : <span className="muted">-</span>}
                       </div>
                       <div className="row-actions">
                         <button className="icon-only" onClick={() => openEdit(r)} title="Edit" aria-label="Edit report">
@@ -254,7 +259,10 @@ export default function ReportsPage() {
           initialMemberId={editTarget?.memberId}
           initialDate={editTarget?.date}
           onClose={() => setShowImport(false)}
-          onImported={load}
+          onImported={(result) => {
+            load();
+            setNotice(result);
+          }}
         />
       )}
 

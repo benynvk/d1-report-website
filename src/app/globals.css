@@ -2284,3 +2284,229 @@ label {
   border-radius: 999px;
   padding: 3px 10px;
 }
+
+/* ---------- Add / edit report form ---------- */
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.report-form .alert {
+  margin: 0;
+}
+.report-form-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.report-form-head h3 {
+  margin: 0;
+}
+.report-form-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+.report-form-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.preset-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.task-rows {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px 76px 96px 34px;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+}
+.task-row + .task-row {
+  border-top: 1px solid var(--border);
+}
+.task-row-head {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--th-bg);
+  border-radius: 10px 10px 0 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.task-row .r,
+.task-row-head .r {
+  text-align: right;
+}
+.task-row .c,
+.task-row-head .c {
+  text-align: center;
+}
+.task-row input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+}
+.task-row.has-error {
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+}
+.task-row.has-error .input-wrap input {
+  border-color: color-mix(in srgb, var(--red) 55%, var(--border));
+}
+.task-cell {
+  min-width: 0;
+}
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-wrap .spinner {
+  position: absolute;
+  right: 10px;
+}
+.row-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 4px;
+}
+.switch-cell {
+  display: flex;
+  justify-content: center;
+  padding-top: 9px;
+  cursor: pointer;
+}
+.switch-cell input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.task-row .icon-only {
+  margin-top: 4px;
+}
+.task-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.task-tools-tip {
+  margin-left: auto;
+  font-size: 12px;
+}
+.btn.ghost.on {
+  border-color: var(--btn-primary-bg);
+  color: var(--primary);
+}
+.board-picker {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.board-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.board-item:last-child {
+  border-bottom: none;
+}
+.board-item:hover:not(:disabled) {
+  background: var(--th-bg);
+}
+.board-item:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.board-item-title {
+  flex: 1;
+  min-width: 0;
+}
+.board-item-add {
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  font-size: 13px;
+}
+.prio {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.prio-high {
+  color: var(--red);
+}
+.prio-medium {
+  color: var(--amber);
+}
+.report-form-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.report-form-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-right: auto;
+  font-size: 13px;
+}
+.report-form-total strong {
+  font-size: 16px;
+}
+.ok-text {
+  font-size: 12px;
+  color: var(--green);
+}
+@media (max-width: 720px) {
+  .task-row {
+    grid-template-columns: minmax(0, 1fr) 70px 34px;
+  }
+  .task-row > :nth-child(2) {
+    grid-column: 1 / -1;
+    order: 5;
+  }
+  .task-row-head > :nth-child(2),
+  .task-row-head > :nth-child(4),
+  .task-row > :nth-child(4) {
+    display: none;
+  }
+  .task-tools-tip {
+    display: none;
+  }
+}
+
+/* Long modals scroll with the overlay instead of clipping their own
+   content — so dropdowns (Select menus) inside forms are never cut off. */
+.modal-overlay {
+  overflow-y: auto;
+  align-items: flex-start;
+}
+.modal {
+  margin: auto;
+}
+.modal.report-form,
+.modal.modal-form {
+  max-height: none;
+  overflow: visible;
+}
