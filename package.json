@@ -9,7 +9,7 @@
     "dev": "next dev",
     "dev:worker": "wrangler dev",
     "build": "next build",
-    "postbuild": "node scripts/pages-redirect.mjs",
+    "build:pages": "next build && node scripts/pages-redirect.mjs",
     "preview": "next build && wrangler dev",
     "deploy": "next build && wrangler deploy",
     "typecheck": "tsc --noEmit && tsc --noEmit -p worker",

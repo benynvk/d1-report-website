@@ -1,12 +1,12 @@
-// Runs after `next build`. Only on Cloudflare Pages (which sets CF_PAGES=1):
-// the old d1-report-website.pages.dev project now just forwards every path to
-// the app's new home on Workers. Never written for the Worker's own build —
-// Workers would honour the file too and redirect to itself.
+// Used only by the old Cloudflare Pages project (d1-report-website.pages.dev),
+// whose build command is `npm run build:pages`: writes a _redirects file that
+// forwards every path to the app's new home on Workers.
+//
+// Never part of the Worker's build — Workers honour _redirects too and would
+// redirect to themselves.
 import { writeFileSync } from 'node:fs';
 
 const TARGET = 'https://d1-report.benynvk.workers.dev';
 
-if (process.env.CF_PAGES === '1') {
-  writeFileSync('out/_redirects', `/* ${TARGET}/:splat 301\n`);
-  console.log(`Pages build: wrote out/_redirects -> ${TARGET}`);
-}
+writeFileSync('out/_redirects', `/* ${TARGET}/:splat 301\n`);
+console.log(`wrote out/_redirects -> ${TARGET}`);
