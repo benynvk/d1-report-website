@@ -21,8 +21,12 @@ export interface Env {
  */
 const SCHEDULE: Record<string, JobName> = {
   '30 2 * * MON-FRI': 'wip-reminder', // 09:30 — who hasn't filled WIP
-  '45 2 * * MON-FRI': 'auto-wip', // 09:45 — fill WIP from Teamwork
+  // Auto-WIP runs twice, 15 min apart: it only fills empty cells, so the
+  // second run is a no-op unless the first was cut short (e.g. by the free
+  // plan's CPU limit) — then it finishes the job.
+  '45,59 2 * * MON-FRI': 'auto-wip', // 09:45 (+09:59) — catch up yesterday's evening, fill today's morning from the D1 board
   '0 11 * * MON-FRI': 'wip-evening-reminder', // 18:00 — today's evening WIP
+  '30,45 11 * * MON-FRI': 'auto-wip-evening', // 18:30 (+18:45) — fill empty evening WIP from the morning
 };
 
 export default {

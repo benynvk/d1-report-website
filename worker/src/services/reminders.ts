@@ -2,6 +2,7 @@ import { config } from '../config';
 import { todayLocal } from '../date';
 import type { Member } from '../db/schema';
 import * as attendance from './attendance';
+import * as autoWip from './auto-wip';
 import { mentionList, postToSpace } from './chat';
 import * as members from './members';
 import * as wip from './wip';
@@ -67,52 +68,13 @@ export async function eveningReminder(date?: string) {
   return { date: today, missingEvening: missingEvening.map((m) => m.name) };
 }
 
-/**
- * 09:45 — for members with `autoWip`, fills the previous working day's
- * evening WIP and today's morning WIP from their assigned Teamwork tasks,
- * where still empty. Skips full-day leave.
- */
-export async function autoWip(date?: string) {
-  const today = date ?? todayLocal(config.tzOffset);
-  const autoMembers = (await members.findAll()).filter((m) => m.autoWip);
-  const filled: string[] = [];
-  if (autoMembers.length === 0) return { date: today, filled };
-
-  const fillMissing = async (dateIso: string, column: wip.WipColumn) => {
-    let missing: Member[];
-    try {
-      missing = await wip.membersMissingEntry(dateIso, column);
-    } catch (err) {
-      console.warn(`Auto WIP: could not check ${column} entries for ${dateIso}: ${err}`);
-      return;
-    }
-    const autoIds = new Set(autoMembers.map((m) => m.id));
-    const holidays = await attendance.holidayMemberIds(dateIso);
-    for (const member of missing.filter((m) => autoIds.has(m.id) && !holidays.has(m.id))) {
-      try {
-        const tasks = await wip.pickAutoTasks(member);
-        if (tasks.length === 0) continue;
-        await wip.writeAutoTasks(dateIso, member, tasks, column);
-        filled.push(`${member.name} ${column} ${dateIso}`);
-      } catch (err) {
-        console.warn(`Auto WIP failed for ${member.name} (${column} ${dateIso}): ${err}`);
-      }
-    }
-  };
-
-  try {
-    await fillMissing(await wip.adjacentWipDay(today, -1), 'evening');
-  } catch (err) {
-    console.warn(`Auto WIP: could not resolve the previous WIP day for ${today}: ${err}`);
-  }
-  await fillMissing(today, 'morning');
-  return { date: today, filled };
-}
-
 export const jobs = {
   'wip-reminder': morningReminder,
   'wip-evening-reminder': eveningReminder,
-  'auto-wip': autoWip,
+  /** 09:45 — previous evening (catch-up) + today's morning, for members with auto-WIP on. */
+  'auto-wip': (date?: string) => autoWip.morning(date),
+  /** 18:30 — today's evening from the morning, for members with auto-WIP on. */
+  'auto-wip-evening': (date?: string) => autoWip.evening(date),
 } as const;
 
 export type JobName = keyof typeof jobs;

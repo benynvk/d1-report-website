@@ -13,8 +13,9 @@
     // UTC. Vietnam = UTC+7. Keep in sync with SCHEDULE in worker/src/index.ts.
     "crons": [
       "30 2 * * MON-FRI", // 09:30 WIP reminder
-      "45 2 * * MON-FRI", // 09:45 auto-WIP
-      "0 11 * * MON-FRI"  // 18:00 evening WIP reminder
+      "45,59 2 * * MON-FRI", // 09:45 auto-WIP (+09:59 retry)
+      "0 11 * * MON-FRI", // 18:00 evening WIP reminder
+      "30,45 11 * * MON-FRI" // 18:30 auto-WIP: empty evening <- morning (+18:45 retry)
     ]
   },
   "observability": { "enabled": true }

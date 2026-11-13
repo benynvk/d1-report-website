@@ -79,7 +79,8 @@ async function loadJson(where: SQL): Promise<string> {
           'member', json_build_object(
             'id', m.id, 'name', m.name, 'email', m.email, 'chatUserId', m."chatUserId",
             'createdAt', to_char(m."createdAt", ${ISO}), 'projectId', m.project_id,
-            'wipName', m."wipName", 'teamworkEmail', m."teamworkEmail", 'autoWip', m."autoWip", 'role', m.role),
+            'wipName', m."wipName", 'teamworkEmail', m."teamworkEmail", 'autoWip', m."autoWip", 'role', m.role,
+            'position', m.position),
           'entries', coalesce((
             select json_agg(json_build_object(
               'id', e.id, 'taskName', e."taskName", 'hours', e.hours, 'href', e.href, 'position', e.position,

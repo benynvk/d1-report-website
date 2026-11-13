@@ -1,4 +1,5 @@
 import { config } from '../config';
+import type { BoardTask } from './auto-wip-rules';
 
 /**
  * Teamwork API client (Basic auth, token as username). Task pages sit behind
@@ -7,8 +8,6 @@ import { config } from '../config';
  */
 const base = () => config.taskUrlPrefix.replace(/\/$/, '');
 const titleCache = new Map<string, string>();
-let stageNamesCache: { at: number; names: Map<number, string> } | null = null;
-const STAGE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 function authHeader(): string {
   return `Basic ${btoa(`${config.teamworkToken}:x`)}`;
@@ -65,78 +64,57 @@ export function resolveMany(urls: (string | null)[]): Promise<(string | null)[]>
   return Promise.all(urls.map((u) => resolveTitle(u)));
 }
 
-/** A Teamwork person's numeric id by exact email match. */
-export async function findUserId(email: string): Promise<number | null> {
-  if (!config.teamworkToken || !email) return null;
+async function get(path: string, what: string): Promise<any | null> {
+  if (!config.teamworkToken) return null;
   try {
-    const res = await fetch(
-      `${base()}/projects/api/v3/people.json?searchTerm=${encodeURIComponent(email)}`,
-      { headers: { Authorization: authHeader() }, signal: AbortSignal.timeout(8000) },
-    );
+    const res = await fetch(`${base()}${path}`, {
+      headers: { Authorization: authHeader() },
+      signal: AbortSignal.timeout(10000),
+    });
     if (!res.ok) {
-      warnAuth(res.status, `people search`);
+      warnAuth(res.status, what);
       return null;
     }
-    const data: any = await res.json();
-    const match = (data.people ?? []).find(
-      (p: any) => (p.email ?? '').toLowerCase() === email.toLowerCase(),
-    );
-    return match?.id ?? null;
+    return await res.json();
   } catch (err) {
-    console.warn(`Teamwork findUserId failed for ${email}: ${err}`);
+    console.warn(`Teamwork ${what} failed: ${err}`);
     return null;
   }
 }
 
 /**
- * stageId -> stage name across every workflow in the account. `include=stages`
- * returns them alongside the workflows, so this is one request per page
- * rather than one per stage (which would blow the Workers subrequest limit).
+ * Every open task of the project's board (TEAMWORK_PROJECT_ID, D1 by default)
+ * with its column, priority and assignees' emails — two requests for the
+ * whole team, with only the fields auto-WIP needs.
  */
-export async function listAllStageNames(): Promise<Map<number, string>> {
-  if (stageNamesCache && Date.now() - stageNamesCache.at < STAGE_CACHE_TTL_MS) {
-    return stageNamesCache.names;
-  }
-  const names = new Map<number, string>();
-  if (!config.teamworkToken) return names;
-
-  for (let page = 1; page <= 10; page++) {
-    const res = await fetch(
-      `${base()}/projects/api/v3/workflows.json?pageSize=100&page=${page}&include=stages`,
-      { headers: { Authorization: authHeader() }, signal: AbortSignal.timeout(10000) },
-    );
-    if (!res.ok) {
-      warnAuth(res.status, 'workflows');
-      return names; // don't cache a failed lookup
-    }
-    const data: any = await res.json();
-    for (const stage of Object.values<any>(data.included?.stages ?? {})) {
-      if (stage?.id != null && stage.name) names.set(Number(stage.id), stage.name);
-    }
-    if (!data.meta?.page?.hasMore) break;
-  }
-  stageNamesCache = { at: Date.now(), names };
-  return names;
-}
-
-/** Open tasks assigned to a Teamwork user, with their board stage id. */
-export async function listAssignedTasks(
-  userId: number,
-): Promise<{ id: number; title: string; url: string; stageId: number | null }[]> {
-  if (!config.teamworkToken) return [];
-  const res = await fetch(
-    `${base()}/projects/api/v3/tasks.json?assignedToUserIds=${userId}&pageSize=250&completed=false`,
-    { headers: { Authorization: authHeader() }, signal: AbortSignal.timeout(10000) },
+export async function listBoardTasks(): Promise<BoardTask[]> {
+  const projectId = config.teamworkProjectId;
+  const [workflows, page] = await Promise.all([
+    get(`/projects/api/v3/projects/${projectId}/workflows.json?include=stages`, 'project workflows'),
+    get(
+      `/projects/api/v3/projects/${projectId}/tasks.json?completed=false&pageSize=500&include=users` +
+        '&fields[tasks]=id,name,priority,workflowStages,assigneeUserIds&fields[users]=id,email',
+      'project tasks',
+    ),
+  ]);
+  if (!page) return [];
+  const stageNames = new Map<number, string>(
+    Object.values<any>(workflows?.included?.stages ?? {}).map((st) => [Number(st.id), String(st.name)]),
   );
-  if (!res.ok) {
-    warnAuth(res.status, `listAssignedTasks(${userId})`);
-    return [];
-  }
-  const data: any = await res.json();
-  return (data.tasks ?? []).map((t: any) => ({
-    id: t.id,
-    title: t.name,
-    url: `${base()}/app/tasks/${t.id}`,
-    stageId: t.stageId ?? null,
-  }));
+  const workflowIds = new Set<number>((workflows?.workflows ?? []).map((w: any) => Number(w.id)));
+  const emails = new Map<number, string>(
+    Object.values<any>(page.included?.users ?? {}).map((u) => [Number(u.id), String(u.email ?? '')]),
+  );
+  return (page.tasks ?? []).map((t: any): BoardTask => {
+    // stageId 0 = on the board's backlog, not in a column.
+    const ws = (t.workflowStages ?? []).find((w: any) => workflowIds.has(Number(w.workflowId)) && w.stageId);
+    return {
+      id: t.id,
+      title: t.name,
+      url: `${base()}/app/tasks/${t.id}`,
+      stage: ws ? (stageNames.get(Number(ws.stageId)) ?? null) : null,
+      priority: t.priority ?? null,
+      assigneeEmails: (t.assigneeUserIds ?? []).map((id: number) => emails.get(Number(id)) ?? '').filter(Boolean),
+    };
+  });
 }

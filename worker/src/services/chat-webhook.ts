@@ -2,6 +2,7 @@ import { config } from '../config';
 import { localHour, toLocalDate } from '../date';
 import type { Member } from '../db/schema';
 import { unauthorized } from '../http';
+import * as autoWip from './auto-wip';
 import { postToSpace } from './chat';
 import { verifyChatToken } from './google';
 import * as members from './members';
@@ -217,8 +218,8 @@ async function handleWipCommand(
 ): Promise<{ text: string }> {
   const { flag, force, body } = cmd;
   if (flag === 'auto') {
-    // Teamwork lookups can outlast Chat's response window — ack now, post
-    // the result via the webhook when done.
+    // Sheet + Teamwork lookups can outlast Chat's response window — ack now,
+    // post the result via the webhook when done.
     defer(
       handleAutoWip(member, date, force)
         .then((res) => postToSpace(res.text))
@@ -270,40 +271,21 @@ async function handleWipCommand(
 }
 
 /**
- * "/wip -a": the auto-WIP fill for this one member — previous working day's
- * evening, then today's morning, where empty (or regardless with -f).
- * Ignores the autoWip flag and holidays: the sender asked for it.
+ * "/wip -a": the 09:45 auto-WIP for this one member, on demand — previous
+ * working day's evening (from its morning), then today's morning (from the
+ * D1 board), each only if empty unless "-f". Ignores the autoWip flag and
+ * leave: the sender asked for it.
  */
 async function handleAutoWip(member: Member, today: string, force: boolean): Promise<{ text: string }> {
-  const tasks = await wip.pickAutoTasks(member);
-  if (tasks.length === 0) return { text: '⚠️ Không tìm thấy task nào đang được assign trên Teamwork.' };
-
-  const filled: string[] = [];
-  const isMissing = async (d: string, col: wip.WipColumn) =>
-    (await wip.membersMissingEntry(d, col)).some((m) => m.id === member.id);
-
-  try {
-    const prevDay = await wip.adjacentWipDay(today, -1);
-    if (force || (await isMissing(prevDay, 'evening'))) {
-      await wip.writeAutoTasks(prevDay, member, tasks, 'evening');
-      filled.push(`chiều ${prevDay}`);
-    }
-  } catch (err) {
-    console.warn(`handleAutoWip: previous evening failed: ${err}`);
-  }
-  try {
-    if (force || (await isMissing(today, 'morning'))) {
-      await wip.writeAutoTasks(today, member, tasks, 'morning');
-      filled.push(`sáng ${today}`);
-    }
-  } catch (err) {
-    console.warn(`handleAutoWip: today morning failed: ${err}`);
-  }
-
-  if (filled.length === 0) {
-    return { text: 'ℹ️ WIP chiều hôm qua và sáng nay đều đã có nội dung - không ghi đè.' };
-  }
-  return { text: `✅ Đã tự động điền WIP: ${filled.join(', ')} (${tasks.length} task từ Teamwork).` };
+  const { items } = await autoWip.forMember(member, today, force);
+  const label = (i: autoWip.AutoWipItem) => `${i.column === 'morning' ? 'sáng' : 'chiều'} ${i.date}`;
+  const written = items.filter((i) => i.action === 'written');
+  const failed = items.filter((i) => i.action === 'failed');
+  const lines: string[] = [];
+  if (written.length) lines.push(`✅ Đã tự động điền WIP: ${written.map(label).join(', ')}.`);
+  for (const i of failed) lines.push(`⚠️ Không điền được WIP ${label(i)}: ${i.reason}`);
+  if (!lines.length) lines.push('ℹ️ WIP chiều hôm qua và sáng nay đều đã có nội dung - không ghi đè.');
+  return { text: lines.join('\n') };
 }
 
 /**

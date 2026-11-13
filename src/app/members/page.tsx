@@ -8,7 +8,7 @@ import { Select } from '@/components/Select';
 import { Avatar } from '@/components/Avatar';
 import { MemberDetail } from '@/components/MemberDetail';
 import { resizeImage } from '@/lib/image';
-import type { Member, MemberRole } from '@/lib/types';
+import type { Member, MemberPosition, MemberRole } from '@/lib/types';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   full_time: 'Full-time',
@@ -16,6 +16,10 @@ const ROLE_LABELS: Record<MemberRole, string> = {
   support: 'Support',
 };
 const ROLE_OPTIONS: MemberRole[] = ['full_time', 'part_time', 'support'];
+const POSITION_OPTIONS: { value: MemberPosition; label: string }[] = [
+  { value: 'dev', label: 'Dev' },
+  { value: 'tester', label: 'Tester' },
+];
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -23,6 +27,7 @@ export default function MembersPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<MemberRole>('full_time');
+  const [position, setPosition] = useState<MemberPosition>('dev');
   const [wipName, setWipName] = useState('');
   const [teamworkEmail, setTeamworkEmail] = useState('');
   const [autoWip, setAutoWip] = useState(false);
@@ -76,6 +81,7 @@ export default function MembersPage() {
     setEmail('');
     setAvatar(null);
     setRole('full_time');
+    setPosition('dev');
     setWipName('');
     setTeamworkEmail('');
     setAutoWip(false);
@@ -94,6 +100,7 @@ export default function MembersPage() {
         email: email.trim(),
         avatarUrl: avatar,
         role,
+        position,
         wipName: wipName.trim() || null,
         teamworkEmail: teamworkEmail.trim() || undefined,
         autoWip,
@@ -130,6 +137,19 @@ export default function MembersPage() {
       showSaved();
     } catch (e: any) {
       patchMember(m.id, { role: prev }); // revert
+      setError(e.message);
+    }
+  };
+
+  const savePosition = async (m: Member, next: MemberPosition) => {
+    if (next === m.position) return;
+    const prev = m.position;
+    patchMember(m.id, { position: next }); // optimistic
+    try {
+      await api.updateMember(m.id, { position: next });
+      showSaved();
+    } catch (e: any) {
+      patchMember(m.id, { position: prev }); // revert
       setError(e.message);
     }
   };
@@ -284,6 +304,7 @@ export default function MembersPage() {
                 <th className="c">Chat ID</th>
                 <th className="c" style={{ whiteSpace: 'nowrap' }}>Auto WIP</th>
                 <th className="c">Role</th>
+                <th className="c">Position</th>
                 <th className="c"></th>
               </tr>
             </thead>
@@ -350,6 +371,13 @@ export default function MembersPage() {
                       value={m.role}
                       onChange={(v) => saveRole(m, v as MemberRole)}
                       options={ROLE_OPTIONS.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                    />
+                  </td>
+                  <td className="mid" style={{ minWidth: 110 }}>
+                    <Select
+                      value={m.position ?? 'dev'}
+                      onChange={(v) => savePosition(m, v as MemberPosition)}
+                      options={POSITION_OPTIONS}
                     />
                   </td>
                   <td style={{ textAlign: 'right' }}>
@@ -458,13 +486,24 @@ export default function MembersPage() {
               />
               <div className="hint">Support members skip daily reminders.</div>
             </div>
+            <div className="field">
+              <label>Position</label>
+              <Select
+                value={position}
+                onChange={(v) => setPosition(v as MemberPosition)}
+                options={POSITION_OPTIONS}
+              />
+              <div className="hint">
+                When auto-WIP would repeat a recent entry, it adds Review code (dev) or Smoke test (tester).
+              </div>
+            </div>
             <label className="checkbox-row">
               <input
                 type="checkbox"
                 checked={autoWip}
                 onChange={(e) => setAutoWip(e.target.checked)}
               />
-              <span>Auto WIP (fill morning entry from Teamwork at 9am)</span>
+              <span>Auto WIP (fill an empty WIP: evening from the morning at 18:30, morning from the D1 board at 9:45)</span>
             </label>
             <div className="modal-actions">
               <button

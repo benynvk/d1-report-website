@@ -22,6 +22,8 @@ import {
 export const d1 = pgSchema('d1_report');
 
 export type MemberRole = 'full_time' | 'part_time' | 'support';
+/** Developer or tester — see worker/migrations/0001_member_position.sql. */
+export type MemberPosition = 'dev' | 'tester';
 export type AttendanceStatus = 'wfh' | 'holiday';
 export type ReportSource = 'google-chat' | 'manual';
 
@@ -58,6 +60,7 @@ export const members = d1.table(
     teamworkEmail: varchar('teamworkEmail'),
     autoWip: boolean('autoWip').notNull().default(false),
     role: varchar('role').$type<MemberRole>().notNull().default('full_time'),
+    position: varchar('position').$type<MemberPosition>().notNull().default('dev'),
   },
   (t) => [
     uniqueIndex('IDX_0a26c707e06435d86a7b921504').on(t.projectId, t.email),

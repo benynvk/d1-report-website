@@ -1,6 +1,6 @@
 import { and, asc, eq, getTableColumns, sql, type SQL } from 'drizzle-orm';
 import { db, schema } from '../db';
-import type { Member, MemberRole } from '../db/schema';
+import type { Member, MemberPosition, MemberRole } from '../db/schema';
 import { conflict, notFound } from '../http';
 import { getActiveProjectId } from './projects';
 
@@ -88,6 +88,7 @@ export interface MemberInput {
   chatUserId?: string | null;
   avatarUrl?: string | null;
   role?: MemberRole;
+  position?: MemberPosition;
   wipName?: string | null;
   teamworkEmail?: string | null;
   autoWip?: boolean;
@@ -106,6 +107,7 @@ export async function create(data: MemberInput & { name: string; email: string }
       chatUserId: normalizeChatUserId(data.chatUserId),
       ...avatarPatch(data.avatarUrl),
       role: data.role ?? 'full_time',
+      position: data.position ?? 'dev',
       wipName: data.wipName?.trim() || null,
       teamworkEmail: normalizeEmail(data.teamworkEmail),
       autoWip: data.autoWip ?? false,
@@ -128,6 +130,7 @@ export async function update(id: string, data: MemberInput): Promise<Member> {
   if (data.chatUserId !== undefined) patch.chatUserId = normalizeChatUserId(data.chatUserId);
   Object.assign(patch, avatarPatch(data.avatarUrl));
   if (data.role !== undefined) patch.role = data.role;
+  if (data.position !== undefined) patch.position = data.position;
   if (data.wipName !== undefined) patch.wipName = data.wipName?.trim() || null;
   if (data.teamworkEmail !== undefined) patch.teamworkEmail = normalizeEmail(data.teamworkEmail);
   if (data.autoWip !== undefined) patch.autoWip = data.autoWip;

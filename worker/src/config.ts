@@ -48,6 +48,10 @@ export const config = {
   get teamworkToken() {
     return env('TEAMWORK_API_TOKEN');
   },
+  /** The Teamwork project whose board auto-WIP picks tasks from (D1). */
+  get teamworkProjectId() {
+    return env('TEAMWORK_PROJECT_ID', '708697');
+  },
   get chatWebhookUrl() {
     return env('GOOGLE_CHAT_WEBHOOK_URL');
   },

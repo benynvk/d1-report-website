@@ -99,6 +99,7 @@ export const api = {
     email: string;
     avatarUrl?: string | null;
     role?: Member['role'];
+    position?: Member['position'];
     wipName?: string | null;
     teamworkEmail?: string;
     autoWip?: boolean;

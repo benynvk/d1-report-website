@@ -8,6 +8,7 @@ import { spaceIdFromWebhookUrl } from './chat';
 import * as google from './google';
 import * as members from './members';
 import { getActiveProject, getActiveProjectId, update as updateProject } from './projects';
+import type { SheetCell } from './auto-wip-rules';
 import * as teamwork from './teamwork';
 
 const { wipConfigs } = schema;
@@ -18,8 +19,6 @@ const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const CHAT_MEMBERS_SCOPE = 'https://www.googleapis.com/auth/chat.memberships.readonly';
 // Read-only: resolves a Chat user id to a name via the org directory.
 const DIRECTORY_SCOPE = 'https://www.googleapis.com/auth/directory.readonly';
-
-const MAX_AUTO_TASKS = 5;
 
 // From this hour (local time) a report about today is the day's summary
 // rather than its plan — see wipColumnFor.
@@ -66,15 +65,6 @@ function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-/** Lower sorts first: In Progress > Ready to QA > other named stage > Backlog/none. */
-function stagePriority(stageId: number | null, stageNames: Map<number, string>): number {
-  const name = (stageId != null ? stageNames.get(stageId) : undefined)?.toLowerCase() ?? '';
-  if (name.includes('progress')) return 0;
-  if (name.includes('qa')) return 1;
-  if (!name || name.includes('backlog')) return 3;
-  return 2;
 }
 
 // ---------- OAuth ----------
@@ -218,13 +208,155 @@ function extractDataRows(values: string[][]): string[][] {
   return values.slice(headerIdx + 1).filter((row) => (row[1] ?? '').trim().length > 0);
 }
 
+/** Row index (0-based, into the tab's values) of a staff name, or -1. */
+function findStaffRow(values: string[][], wipName: string): number {
+  const headerIdx = findHeaderIndex(values);
+  if (headerIdx === -1) return -1;
+  const wanted = wipName.trim().toLowerCase();
+  for (let i = headerIdx + 1; i < values.length; i++) {
+    if ((values[i][1] ?? '').trim().toLowerCase() === wanted) return i;
+  }
+  return -1;
+}
+
+type Tab = { sheetId: number; title: string };
+type DayLocation = { spreadsheetId: string; titles: string[]; tab: Tab | null };
+
+/**
+ * One unit of sheet work (a request, a cron job): reuses the access token,
+ * month configs, tab lists and tab values instead of re-fetching them for
+ * every member — which keeps a whole-team job well inside the Workers limit
+ * of 50 outbound requests per invocation. Writes made through it update the
+ * cached values, so later reads in the same session see them.
+ */
+export class SheetSession {
+  #token?: Promise<string>;
+  #configs = new Map<string, Promise<WipConfig | undefined>>();
+  #tabs = new Map<string, Promise<Tab[]>>();
+  #values = new Map<string, string[][]>();
+
+  token(): Promise<string> {
+    return (this.#token ??= authorizedToken());
+  }
+
+  config(month: string): Promise<WipConfig | undefined> {
+    let c = this.#configs.get(month);
+    if (!c) this.#configs.set(month, (c = configFor(month)));
+    return c;
+  }
+
+  async tabs(spreadsheetId: string): Promise<Tab[]> {
+    let t = this.#tabs.get(spreadsheetId);
+    if (!t) this.#tabs.set(spreadsheetId, (t = this.token().then((token) => listTabs(token, spreadsheetId))));
+    return t;
+  }
+
+  /** Where a day lives; null when its month has no sheet configured. */
+  async locate(dateIso: string): Promise<DayLocation | null> {
+    const cfg = await this.config(dateIso.slice(0, 7));
+    if (!cfg) return null;
+    const spreadsheetId = extractSpreadsheetId(cfg.spreadsheetUrl);
+    const tabs = await this.tabs(spreadsheetId);
+    const titles = tabs.map((t) => t.title);
+    const title = tabForDay(titles, Number(dateIso.slice(8, 10)));
+    return { spreadsheetId, titles, tab: tabs.find((t) => t.title === title) ?? null };
+  }
+
+  #key(spreadsheetId: string, tab: string) {
+    return `${spreadsheetId}\u0000${tab}`;
+  }
+
+  /** A day tab's values (A1:D200); [] when the day has no tab. */
+  async values(dateIso: string): Promise<string[][]> {
+    const loc = await this.locate(dateIso);
+    if (!loc?.tab) return [];
+    const key = this.#key(loc.spreadsheetId, loc.tab.title);
+    let v = this.#values.get(key);
+    if (!v) this.#values.set(key, (v = await fetchValues(await this.token(), loc.spreadsheetId, loc.tab.title)));
+    return v;
+  }
+
+  /** Loads several days' values with one request per spreadsheet. */
+  async prefetch(dates: string[]): Promise<void> {
+    const wanted = new Map<string, string[]>(); // spreadsheetId -> tab titles
+    for (const d of dates) {
+      const loc = await this.locate(d);
+      if (!loc?.tab || this.#values.has(this.#key(loc.spreadsheetId, loc.tab.title))) continue;
+      const list = wanted.get(loc.spreadsheetId) ?? [];
+      if (!list.includes(loc.tab.title)) list.push(loc.tab.title);
+      wanted.set(loc.spreadsheetId, list);
+    }
+    const token = await this.token();
+    await Promise.all(
+      [...wanted].map(async ([spreadsheetId, titles]) => {
+        const ranges = titles.map((t) => `ranges=${encodeURIComponent(`'${t}'!A1:D200`)}`).join('&');
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${ranges}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          console.warn(`Sheets batchGet ${res.status}: ${await res.text().catch(() => '')}`);
+          throw badRequest(`Google Sheets API error (${res.status})`);
+        }
+        const data: any = await res.json();
+        titles.forEach((t, i) => this.#values.set(this.#key(spreadsheetId, t), data.valueRanges?.[i]?.values ?? []));
+      }),
+    );
+  }
+
+  /**
+   * One column of a day tab with its formatting (links), keyed by lowercased
+   * staff name — needed to copy a cell without losing its task links.
+   */
+  async richColumn(dateIso: string, column: WipColumn): Promise<Map<string, SheetCell>> {
+    const loc = await this.locate(dateIso);
+    const out = new Map<string, SheetCell>();
+    if (!loc?.tab) return out;
+    const col = column === 'morning' ? 'C' : 'D';
+    const range = encodeURIComponent(`'${loc.tab.title}'!B1:${col}200`);
+    const fields = encodeURIComponent(
+      'sheets(data(rowData(values(formattedValue,hyperlink,textFormatRuns(startIndex,format(link(uri)))))))',
+    );
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${loc.spreadsheetId}?ranges=${range}&fields=${fields}`,
+      { headers: { Authorization: `Bearer ${await this.token()}` } },
+    );
+    if (!res.ok) {
+      console.warn(`Sheets get ${res.status}: ${await res.text().catch(() => '')}`);
+      throw badRequest(`Google Sheets API error (${res.status})`);
+    }
+    const data: any = await res.json();
+    for (const row of data.sheets?.[0]?.data?.[0]?.rowData ?? []) {
+      const cells: SheetCell[] = row.values ?? [];
+      const name = (cells[0]?.formattedValue ?? '').trim().toLowerCase();
+      // B..C is two cells, B..D three — the wanted column is the last one.
+      if (name) out.set(name, cells[col === 'C' ? 1 : 2] ?? {});
+    }
+    return out;
+  }
+
+  /** Records a write in the cached values. */
+  remember(dateIso: string, loc: DayLocation, rowIndex: number, columnIndex: number, text: string, wipName: string) {
+    if (!loc.tab) return;
+    const v = this.#values.get(this.#key(loc.spreadsheetId, loc.tab.title));
+    if (!v) return;
+    while (v.length <= rowIndex) v.push([]);
+    const row = v[rowIndex];
+    while (row.length <= columnIndex) row.push('');
+    row[1] ||= wipName;
+    row[columnIndex] = text;
+  }
+}
+
 // ---------- Reading a day ----------
 
 /**
  * The WIP rows for a date, matched to members by `wipName`.
  * `configured: false` when no sheet is set up for that month.
  */
-export async function getDay(dateIso: string): Promise<{
+export async function getDay(
+  dateIso: string,
+  session = new SheetSession(),
+): Promise<{
   date: string;
   tabName: string;
   configured: boolean;
@@ -232,27 +364,14 @@ export async function getDay(dateIso: string): Promise<{
   /** Only when the day's tab yielded nothing: the sheet's real tab names. */
   availableTabs?: string[];
 }> {
-  const month = dateIso.slice(0, 7);
   const day = String(Number(dateIso.slice(8, 10)));
-  const cfg = await configFor(month);
-  if (!cfg) return { date: dateIso, tabName: day, configured: false, rows: [] };
-
-  const token = await authorizedToken();
-  const spreadsheetId = extractSpreadsheetId(cfg.spreadsheetUrl);
-  let tabName = day;
-  let values = await fetchValues(token, spreadsheetId, tabName);
-  let availableTabs: string[] | undefined;
-  if (values.length === 0) {
-    // The month may name tabs "04"; reading titles also turns an unreachable
-    // sheet into an error instead of a silent empty day.
-    const titles = (await listTabs(token, spreadsheetId)).map((t) => t.title);
-    const match = tabForDay(titles, Number(day));
-    if (match && match !== tabName) {
-      tabName = match;
-      values = await fetchValues(token, spreadsheetId, tabName);
-    }
-    if (values.length === 0) availableTabs = titles;
-  }
+  const loc = await session.locate(dateIso);
+  if (!loc) return { date: dateIso, tabName: day, configured: false, rows: [] };
+  const values = await session.values(dateIso);
+  const tabName = loc.tab?.title ?? day;
+  // Nothing under the day: show what the sheet does contain, so a naming
+  // mismatch isn't mistaken for a weekend.
+  const availableTabs = values.length === 0 ? loc.titles : undefined;
 
   const all = await members.findAll();
   const byWipName = new Map(all.filter((m) => m.wipName).map((m) => [m.wipName!.trim().toLowerCase(), m]));
@@ -272,12 +391,28 @@ export async function getDay(dateIso: string): Promise<{
   return { date: dateIso, tabName, configured: true, rows, availableTabs };
 }
 
+/** A member's own Morning/Evening text for a day ('' when absent). */
+export async function memberCell(
+  dateIso: string,
+  wipName: string,
+  column: WipColumn,
+  session: SheetSession,
+): Promise<string> {
+  const values = await session.values(dateIso);
+  const row = findStaffRow(values, wipName);
+  return row === -1 ? '' : (values[row][column === 'morning' ? 2 : 3] ?? '');
+}
+
 /**
  * Members (with a wipName) who haven't filled `period` for a date. [] when
  * the month has no sheet configured — nothing to check against.
  */
-export async function membersMissingEntry(dateIso: string, period: WipColumn): Promise<Member[]> {
-  const day = await getDay(dateIso);
+export async function membersMissingEntry(
+  dateIso: string,
+  period: WipColumn,
+  session = new SheetSession(),
+): Promise<Member[]> {
+  const day = await getDay(dateIso, session);
   if (!day.configured) return [];
   const filledIds = new Set(
     day.rows
@@ -293,15 +428,18 @@ export async function membersMissingEntry(dateIso: string, period: WipColumn): P
  * (skipping weekends/holidays without one), crossing into the adjacent
  * month's sheet at a month boundary.
  */
-export async function adjacentWipDay(dateIso: string, direction: 1 | -1): Promise<string> {
-  const token = await authorizedToken();
+export async function adjacentWipDay(
+  dateIso: string,
+  direction: 1 | -1,
+  session = new SheetSession(),
+): Promise<string> {
   let month = dateIso.slice(0, 7);
   const startDay = Number(dateIso.slice(8, 10));
 
   for (let hop = 0; hop < 24; hop++) {
-    const cfg = await configFor(month);
+    const cfg = await session.config(month);
     if (!cfg) throw badRequest(`No WIP sheet configured for ${month}.`);
-    const tabs = await listTabs(token, extractSpreadsheetId(cfg.spreadsheetUrl));
+    const tabs = await session.tabs(extractSpreadsheetId(cfg.spreadsheetUrl));
     const dayNumbers = tabs.map((t) => Number(t.title)).filter((n) => Number.isInteger(n) && n > 0);
     const candidates =
       hop === 0
@@ -397,33 +535,21 @@ async function writeToRow(
   member: Member,
   column: WipColumn,
   rich: RichCell,
+  session: SheetSession,
 ): Promise<{ created: boolean }> {
   if (!member.wipName) {
     throw badRequest('No WIP name set for this member - ask a leader to set it in Members.');
   }
-  const month = dateIso.slice(0, 7);
-  const day = Number(dateIso.slice(8, 10));
-  const cfg = await configFor(month);
-  if (!cfg) throw badRequest(`No WIP sheet configured for ${month}.`);
+  const loc = await session.locate(dateIso);
+  if (!loc) throw badRequest(`No WIP sheet configured for ${dateIso.slice(0, 7)}.`);
+  if (!loc.tab) throw badRequest(`There is no "${Number(dateIso.slice(8, 10))}" tab in this month's sheet yet.`);
+  const tab = loc.tab;
+  const values = await session.values(dateIso);
+  if (findHeaderIndex(values) === -1) throw badRequest(`The "${tab.title}" tab isn't set up in this month's sheet yet.`);
 
-  const token = await authorizedToken();
-  const spreadsheetId = extractSpreadsheetId(cfg.spreadsheetUrl);
-  const tabs = await listTabs(token, spreadsheetId);
-  const tab = tabForDay(tabs.map((t) => t.title), day) ?? String(day);
-  const values = await fetchValues(token, spreadsheetId, tab);
-  const headerIdx = findHeaderIndex(values);
-  if (headerIdx === -1) throw badRequest(`The "${tab}" tab isn't set up in this month's sheet yet.`);
-
-  const wipNameLower = member.wipName.trim().toLowerCase();
-  let targetRow = -1; // 0-based index into `values`
-  for (let i = headerIdx + 1; i < values.length; i++) {
-    if ((values[i][1] ?? '').trim().toLowerCase() === wipNameLower) {
-      targetRow = i;
-      break;
-    }
-  }
-
+  const token = await session.token();
   const columnIndex = column === 'morning' ? 2 : 3; // C / D
+  const targetRow = findStaffRow(values, member.wipName);
   let created = false;
   let sheetRow1Based: number;
 
@@ -431,9 +557,9 @@ async function writeToRow(
     // No row yet today — append a plain one, then overwrite the cell richly.
     const newRow =
       column === 'morning' ? ['', member.wipName, rich.text, ''] : ['', member.wipName, '', rich.text];
-    const range = encodeURIComponent(`'${tab}'!A1:D1`);
+    const range = encodeURIComponent(`'${tab.title}'!A1:D1`);
     const res = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append` +
+      `https://sheets.googleapis.com/v4/spreadsheets/${loc.spreadsheetId}/values/${range}:append` +
         '?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
       {
         method: 'POST',
@@ -455,9 +581,8 @@ async function writeToRow(
     sheetRow1Based = targetRow + 1;
   }
 
-  const sheet = tabs.find((s) => s.title === tab);
-  if (!sheet) throw badRequest(`Tab "${tab}" not found.`);
-  await writeRichCell(token, spreadsheetId, sheet.sheetId, sheetRow1Based - 1, columnIndex, rich);
+  await writeRichCell(token, loc.spreadsheetId, tab.sheetId, sheetRow1Based - 1, columnIndex, rich);
+  session.remember(dateIso, loc, sheetRow1Based - 1, columnIndex, rich.text, member.wipName);
   return { created };
 }
 
@@ -466,8 +591,9 @@ export function writeRichLines(
   member: Member,
   column: WipColumn,
   lines: RichLine[],
+  session = new SheetSession(),
 ): Promise<{ created: boolean }> {
-  return writeToRow(dateIso, member, column, buildRichCell(lines));
+  return writeToRow(dateIso, member, column, buildRichCell(lines), session);
 }
 
 /**
@@ -543,34 +669,6 @@ export async function syncReport(
     console.warn(`syncReport failed for ${member.name} (${column} ${report.date}): ${error}`);
     return { updated: false, column, date: report.date, error };
   }
-}
-
-/** Known Teamwork tasks (title + url) into a cell — used by auto-WIP. */
-export function writeAutoTasks(
-  dateIso: string,
-  member: Member,
-  tasks: { title: string; url: string }[],
-  column: WipColumn,
-): Promise<{ created: boolean }> {
-  return writeRichLines(dateIso, member, column, tasks.map((t) => ({ display: t.title, url: t.url })));
-}
-
-/**
- * The member's open Teamwork tasks, In Progress > Ready to QA > other stage
- * > Backlog/none, capped at 5.
- */
-export async function pickAutoTasks(member: Member): Promise<{ title: string; url: string }[]> {
-  const userId = await teamwork.findUserId(members.teamworkEmailFor(member));
-  if (!userId) return [];
-  const [tasks, stageNames] = await Promise.all([
-    teamwork.listAssignedTasks(userId),
-    teamwork.listAllStageNames(),
-  ]);
-  return tasks
-    .slice()
-    .sort((a, b) => stagePriority(a.stageId, stageNames) - stagePriority(b.stageId, stageNames))
-    .slice(0, MAX_AUTO_TASKS)
-    .map((t) => ({ title: t.title, url: t.url }));
 }
 
 // ---------- Chat member lookup (to help map Member.chatUserId) ----------

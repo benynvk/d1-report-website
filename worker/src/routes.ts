@@ -5,6 +5,7 @@ import { config } from './config';
 import { todayLocal } from './date';
 import { body, notFound, query, send, toErrorResponse } from './http';
 import * as attendance from './services/attendance';
+import * as autoWip from './services/auto-wip';
 import * as chatWebhook from './services/chat-webhook';
 import * as members from './services/members';
 import * as projects from './services/projects';
@@ -52,6 +53,8 @@ const memberFields = {
   /** A base64 data URL (≤300px, resized client-side) replaces the image; '' clears it. */
   avatarUrl: z.string().nullish(),
   role: role.optional(),
+  /** dev | tester — picks the filler task auto-WIP adds to avoid a repeat. */
+  position: z.enum(['dev', 'tester']).optional(),
   wipName: z.string().nullish(),
   autoWip: z.boolean().optional(),
 };
@@ -216,6 +219,14 @@ api.post('/wip/config', async (c) => {
 api.delete('/wip/config/:id', async (c) => send(await wip.removeConfig(c.req.param('id'))));
 api.get('/wip/day', async (c) => send(await wip.getDay(query(c, 'date') ?? todayLocal(config.tzOffset))));
 api.get('/wip/chat-members', async () => send(await wip.listSpaceMembers()));
+/**
+ * What auto-WIP would write, without writing: ?job=morning|evening,
+ * &date=YYYY-MM-DD (default today), &all=1 to include members who don't
+ * have auto-WIP on.
+ */
+api.get('/wip/auto-plan', async (c) =>
+  send(await autoWip.plan(query(c, 'job') === 'evening' ? 'evening' : 'morning', query(c, 'date'), query(c, 'all') === '1')),
+);
 /** The "Check WIP" button: runs the morning reminder now. */
 api.post('/wip/check-reminder', async (c) => send(await jobs['wip-reminder'](query(c, 'date'))));
 

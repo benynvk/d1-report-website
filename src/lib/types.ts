@@ -1,4 +1,5 @@
 export type MemberRole = 'full_time' | 'part_time' | 'support';
+export type MemberPosition = 'dev' | 'tester';
 
 export interface Project {
   id: string;
@@ -15,6 +16,8 @@ export interface Member {
   chatUserId: string | null;
   avatarUrl: string | null;
   role: MemberRole;
+  /** Decides the filler task auto-WIP adds: Review code (dev) / Smoke test (tester). */
+  position: MemberPosition;
   wipName: string | null;
   teamworkEmail: string | null;
   autoWip: boolean;
