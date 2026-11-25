@@ -101,6 +101,39 @@ export function eveningFromMorning(morning: CellLine[]): CellLine[] {
     });
 }
 
+// ---------- Cell -> report entries ----------
+
+export interface AutoReportEntry {
+  taskName: string;
+  href: string | null;
+  hours: number;
+  inProgress: boolean;
+}
+
+/**
+ * The report tasks behind a written WIP cell, so the system keeps the same
+ * record as the sheet. A linked line is that Teamwork task; a plain line is
+ * a task type when it names one, else an "Other - <text>" task (dropped when
+ * the project has no "Other" type). No hours: auto-WIP doesn't know them.
+ */
+export function entriesFromLines(lines: CellLine[], allowedTypes: Set<string>): AutoReportEntry[] {
+  const out: AutoReportEntry[] = [];
+  for (const l of lines) {
+    const whole = `${l.display}${l.suffix ?? ''}`;
+    const inProgress = /=>\s*in progress/i.test(whole);
+    const name = l.display.replace(/\s*=>.*$/, '').trim();
+    if (!name) continue;
+    if (l.url) {
+      out.push({ taskName: name, href: l.url, hours: 0, inProgress });
+      continue;
+    }
+    const bare = name.replace(/^other\s+-\s+/i, '');
+    if (allowedTypes.has(bare.toLowerCase())) out.push({ taskName: bare, href: null, hours: 0, inProgress });
+    else if (allowedTypes.has('other')) out.push({ taskName: `Other - ${bare}`, href: null, hours: 0, inProgress });
+  }
+  return out;
+}
+
 // ---------- Reading a rich cell ----------
 
 /** A cell as the Sheets API returns it with grid data. */

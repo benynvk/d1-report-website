@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  entriesFromLines,
   type BoardTask,
   cellText,
   eveningFromMorning,
@@ -140,5 +141,28 @@ describe('historyWindow', () => {
     expect(historyWindow('2026-12-02')).toEqual([
       '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29', '2026-11-30', '2026-12-01', '2026-12-02',
     ]);
+  });
+});
+
+describe('entriesFromLines', () => {
+  const types = new Set(['other', 'meeting']);
+  it('maps links, task types and free text, with In progress from the status', () => {
+    expect(
+      entriesFromLines(
+        [
+          { display: 'Login API', url: 'https://x/tasks/1', prefix: '- ', suffix: ' => In progress' },
+          { display: 'Meeting', prefix: '- ' },
+          { display: 'Review code => Done', prefix: '- ' },
+        ],
+        types,
+      ),
+    ).toEqual([
+      { taskName: 'Login API', href: 'https://x/tasks/1', hours: 0, inProgress: true },
+      { taskName: 'Meeting', href: null, hours: 0, inProgress: false },
+      { taskName: 'Other - Review code', href: null, hours: 0, inProgress: false },
+    ]);
+  });
+  it('drops free text when there is no Other type', () => {
+    expect(entriesFromLines([{ display: 'Smoke test' }], new Set())).toEqual([]);
   });
 });

@@ -25,7 +25,8 @@ export type MemberRole = 'full_time' | 'part_time' | 'support';
 /** Developer or tester — see worker/migrations/0001_member_position.sql. */
 export type MemberPosition = 'dev' | 'tester';
 export type AttendanceStatus = 'wfh' | 'holiday';
-export type ReportSource = 'google-chat' | 'manual';
+/** 'auto-wip': written by auto-WIP from what it put in the WIP sheet. */
+export type ReportSource = 'google-chat' | 'manual' | 'auto-wip';
 
 export const projects = d1.table(
   'projects',

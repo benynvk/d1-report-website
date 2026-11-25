@@ -5,6 +5,7 @@ import { db, schema } from '../db';
 import type { DailyReportRow, Member, ReportEntry, ReportSource } from '../db/schema';
 import { badRequest, notFound } from '../http';
 import { parseReport, type ParsedEntry } from '../parser';
+import { entriesFromLines, type CellLine } from './auto-wip-rules';
 import * as members from './members';
 import { getActiveProjectId } from './projects';
 import * as taskTypes from './task-types';
@@ -277,4 +278,24 @@ export async function importManual(dto: {
     wipSync = { updated: false, error: err instanceof Error ? err.message : String(err) };
   }
   return { ...report, wipSync };
+}
+
+export type AutoWipSave = 'saved' | 'kept-report' | 'nothing-to-save';
+
+/**
+ * Records what auto-WIP wrote to the sheet as the member's report for that
+ * day (source 'auto-wip'). A report the member made themselves is never
+ * replaced; an earlier auto-WIP one is (the evening run updates the morning's).
+ */
+export async function saveAutoWip(member: Member, date: string, lines: CellLine[]): Promise<AutoWipSave> {
+  const existing = await db().query.dailyReports.findFirst({
+    where: (r, { and, eq: is }) => and(is(r.memberId, member.id), is(r.date, date)),
+    columns: { source: true },
+  });
+  if (existing && existing.source !== 'auto-wip') return 'kept-report';
+  const entries = entriesFromLines(lines, await taskTypes.getAllowedSet());
+  if (!entries.length) return 'nothing-to-save';
+  const rawText = lines.map((l) => `${l.prefix ?? ''}${l.display}${l.suffix ?? ''}`).join('\n');
+  await upsert({ member, date, rawText, source: 'auto-wip', entries });
+  return 'saved';
 }

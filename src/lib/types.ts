@@ -43,7 +43,7 @@ export interface ReportEntry {
 export interface DailyReport {
   id: string;
   date: string;
-  source: 'google-chat' | 'manual';
+  source: 'google-chat' | 'manual' | 'auto-wip';
   member: MemberRef;
   entries: ReportEntry[];
   createdAt: string;

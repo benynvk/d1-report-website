@@ -218,6 +218,11 @@ export default function ReportsPage() {
                                 <ChatIcon />
                               </span>
                             )}
+                            {r.source === 'auto-wip' && (
+                              <span className="auto-chip" title="Filled in by auto-WIP from the WIP sheet">
+                                Auto
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>

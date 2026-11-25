@@ -17,6 +17,7 @@ import {
   pickTasks,
 } from './auto-wip-rules';
 import * as members from './members';
+import * as reports from './reports';
 import * as teamwork from './teamwork';
 import * as wip from './wip';
 
@@ -45,6 +46,8 @@ export interface AutoWipItem {
   change?: UniqueResult['change'];
   text?: string;
   reason?: string;
+  /** What happened to the system report for that day (written runs only). */
+  report?: reports.AutoWipSave | 'failed';
 }
 
 interface RunOptions {
@@ -153,8 +156,20 @@ async function fillDay(
 
       const unique = makeUnique(lines, await history(run, member, date, column), filler);
       const text = cellText(unique.lines);
-      if (!run.opts.dryRun) await wip.writeRichLines(date, member, column, unique.lines, run.session);
-      out.push({ ...item, action: run.opts.dryRun ? 'planned' : 'written', source, change: unique.change, text });
+      if (run.opts.dryRun) {
+        out.push({ ...item, action: 'planned', source, change: unique.change, text });
+        continue;
+      }
+      await wip.writeRichLines(date, member, column, unique.lines, run.session);
+      // Keep the system in step with the sheet; a failure here doesn't undo the sheet write.
+      let report: AutoWipItem['report'];
+      try {
+        report = await reports.saveAutoWip(member, date, unique.lines);
+      } catch (err) {
+        console.warn(`Auto WIP: report not saved for ${member.name} ${date}: ${err}`);
+        report = 'failed';
+      }
+      out.push({ ...item, action: 'written', source, change: unique.change, text, report });
     } catch (err) {
       out.push({ ...item, action: 'failed', reason: err instanceof Error ? err.message : String(err) });
     }
