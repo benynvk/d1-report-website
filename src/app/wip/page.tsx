@@ -23,23 +23,49 @@ function shortUrl(raw: string): string {
   }
 }
 
-/** Renders a WIP cell: one line per entry, URLs as short links. */
-function WipCell({ text }: { text: string }) {
+type Segment = { text: string; url?: string };
+
+/** Plain text with bare URLs turned into short links. */
+function Linkified({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(https?:\/\/\S+)/g).map((part, j) =>
+        /^https?:\/\//.test(part) ? (
+          <a key={j} href={part} target="_blank" rel="noreferrer" title={part}>
+            {shortUrl(part)}
+          </a>
+        ) : (
+          <span key={j}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+/** Renders a WIP cell: one line per entry, linked text and URLs as links. */
+function WipCell({ text, rich }: { text: string; rich?: Segment[] }) {
   if (!text.trim()) return <span className="not-filled">Not filled</span>;
+  // Split the segments into lines, keeping each piece's link.
+  const lines: Segment[][] = [[]];
+  for (const seg of rich ?? [{ text }]) {
+    seg.text.split('\n').forEach((piece, i) => {
+      if (i > 0) lines.push([]);
+      if (piece) lines[lines.length - 1].push({ text: piece, url: seg.url });
+    });
+  }
   return (
     <div className="wip-lines">
-      {text
-        .split('\n')
-        .filter((l) => l.trim())
+      {lines
+        .filter((l) => l.some((p) => p.text.trim()))
         .map((line, i) => (
           <div key={i}>
-            {line.split(/(https?:\/\/\S+)/g).map((part, j) =>
-              /^https?:\/\//.test(part) ? (
-                <a key={j} href={part} target="_blank" rel="noreferrer" title={part}>
-                  {shortUrl(part)}
+            {line.map((p, j) =>
+              p.url ? (
+                <a key={j} href={p.url} target="_blank" rel="noreferrer" title={p.url}>
+                  {p.text}
                 </a>
               ) : (
-                <span key={j}>{part}</span>
+                <Linkified key={j} text={p.text} />
               ),
             )}
           </div>
@@ -195,10 +221,10 @@ export default function WipPage() {
                     </div>
                   </td>
                   <td data-label="Morning">
-                    <WipCell text={r.morning} />
+                    <WipCell text={r.morning} rich={r.morningRich} />
                   </td>
                   <td data-label="Evening">
-                    <WipCell text={r.evening} />
+                    <WipCell text={r.evening} rich={r.eveningRich} />
                   </td>
                 </tr>
               ))}

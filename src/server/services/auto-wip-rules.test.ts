@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   entriesFromLines,
   workNotes,
+  cellSegments,
   nextProgress,
   annotateLines,
   randomDayHours,
@@ -263,5 +264,19 @@ describe('evening hours', () => {
       expect(Math.round(parts.reduce((a, b) => a + b, 0) * 10)).toBe(Math.round(total * 10));
       parts.forEach((p) => expect(p).toBeGreaterThanOrEqual(0.5));
     }
+  });
+});
+
+describe('cellSegments', () => {
+  it('splits a cell into linked and plain pieces', () => {
+    expect(
+      cellSegments({
+        formattedValue: '- Login API: done\n- Meeting',
+        textFormatRuns: [{ startIndex: 2, format: { link: { uri: 'https://x/1' } } }, { startIndex: 11, format: {} }],
+      }),
+    ).toEqual([{ text: '- ' }, { text: 'Login API', url: 'https://x/1' }, { text: ': done\n- Meeting' }]);
+  });
+  it('uses a whole-cell hyperlink', () => {
+    expect(cellSegments({ formattedValue: 'Task', hyperlink: 'https://x/2' })).toEqual([{ text: 'Task', url: 'https://x/2' }]);
   });
 });

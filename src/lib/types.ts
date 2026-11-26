@@ -159,6 +159,9 @@ export interface WipRow {
   staffName: string;
   morning: string;
   evening: string;
+  /** The cells with their links (task names linked in the sheet). */
+  morningRich?: { text: string; url?: string }[];
+  eveningRich?: { text: string; url?: string }[];
   memberId: string | null;
   memberName: string | null;
   avatarUrl: string | null;

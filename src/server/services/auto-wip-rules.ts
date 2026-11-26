@@ -284,6 +284,35 @@ export interface SheetCell {
   textFormatRuns?: { startIndex?: number; format?: { link?: { uri?: string } } }[];
 }
 
+/** A piece of a cell's text, with the link it carries (if any). */
+export interface CellSegment {
+  text: string;
+  url?: string;
+}
+
+/**
+ * A cell as text pieces with their links (rich-text links and a whole-cell
+ * hyperlink), so a page can show "Task name" as a link instead of plain text.
+ */
+export function cellSegments(cell: SheetCell | undefined): CellSegment[] {
+  const text = cell?.formattedValue ?? '';
+  if (!text) return [];
+  const runs = (cell?.textFormatRuns ?? [])
+    .map((r) => ({ start: r.startIndex ?? 0, url: r.format?.link?.uri }))
+    .sort((a, b) => a.start - b.start);
+  if (!runs.length || runs[0].start > 0) runs.unshift({ start: 0, url: undefined });
+  const out: CellSegment[] = [];
+  runs.forEach((r, i) => {
+    const piece = text.slice(r.start, runs[i + 1]?.start ?? text.length);
+    if (!piece) return;
+    const url = r.url ?? (runs.length === 1 ? cell?.hyperlink : undefined);
+    const last = out[out.length - 1];
+    if (last && last.url === url) last.text += piece;
+    else out.push(url ? { text: piece, url } : { text: piece });
+  });
+  return out;
+}
+
 /**
  * Splits a cell into lines, keeping each line's link (the run that starts
  * inside it) and dropping the bullet, so it can be re-rendered.

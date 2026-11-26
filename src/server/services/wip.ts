@@ -8,7 +8,7 @@ import { spaceIdFromWebhookUrl } from './chat';
 import * as google from './google';
 import * as members from './members';
 import { getActiveProject, getActiveProjectId, update as updateProject } from './projects';
-import type { SheetCell } from './auto-wip-rules';
+import { cellSegments, type CellSegment, type SheetCell } from './auto-wip-rules';
 import * as teamwork from './teamwork';
 import { taskNote } from '../../lib/format';
 
@@ -32,6 +32,9 @@ export interface WipRow {
   staffName: string;
   morning: string;
   evening: string;
+  /** The cells with their links, when the sheet's formatting could be read. */
+  morningRich?: CellSegment[];
+  eveningRich?: CellSegment[];
   memberId: string | null;
   memberName: string | null;
   avatarUrl: string | null;
@@ -373,6 +376,22 @@ export async function getDay(
   // mismatch isn't mistaken for a weekend.
   const availableTabs = values.length === 0 ? loc.titles : undefined;
 
+  // Links in the cells (best-effort: plain text still shows if this fails).
+  const [richMorning, richEvening] = await Promise.all(
+    (['morning', 'evening'] as const).map((col) =>
+      values.length
+        ? session.richColumn(dateIso, col).catch((err) => {
+            console.warn(`WIP links not read for ${dateIso} ${col}: ${err}`);
+            return new Map<string, SheetCell>();
+          })
+        : new Map<string, SheetCell>(),
+    ),
+  );
+  const rich = (cells: Map<string, SheetCell>, name: string) => {
+    const segs = cellSegments(cells.get(name));
+    return segs.some((x) => x.url) ? segs : undefined;
+  };
+
   const all = await members.findAll();
   const byWipName = new Map(all.filter((m) => m.wipName).map((m) => [m.wipName!.trim().toLowerCase(), m]));
   const rows: WipRow[] = extractDataRows(values).map((r) => {
@@ -383,6 +402,8 @@ export async function getDay(
       staffName,
       morning: r[2] ?? '',
       evening: r[3] ?? '',
+      morningRich: rich(richMorning, staffName.toLowerCase()),
+      eveningRich: rich(richEvening, staffName.toLowerCase()),
       memberId: member?.id ?? null,
       memberName: member?.name ?? null,
       avatarUrl: member?.avatarUrl ?? null,
