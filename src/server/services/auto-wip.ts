@@ -8,13 +8,19 @@ import {
   type SheetCell,
   FILLER_TASK,
   type UniqueResult,
+  annotateLines,
   cellText,
   eveningFromMorning,
   historyWindow,
   makeUnique,
+  nextProgress,
   normalizeCell,
   parseCell,
   pickTasks,
+  randomDayHours,
+  splitHours,
+  splitSuffix,
+  workNotes,
 } from './auto-wip-rules';
 import * as members from './members';
 import * as reports from './reports';
@@ -112,6 +118,8 @@ async function fillDay(
   }
   await run.session.prefetch(historyWindow(date)); // one request per spreadsheet
   const onLeave = run.opts.skipLeave ? await attendance.holidayMemberIds(date) : new Set<string>();
+  // Evening reports log hours; a partial leave (2h / 4h) comes off the day.
+  const leave = column === 'evening' ? await attendance.mapForDate(date) : new Map();
 
   const out: AutoWipItem[] = [];
   for (const member of targets) {
@@ -155,16 +163,37 @@ async function fillDay(
       }
 
       const unique = makeUnique(lines, await history(run, member, date, column), filler);
-      const text = cellText(unique.lines);
+      // What was done on each task and, in the evening, how long (a plausible
+      // day less any partial leave) — written in the cell, read back by the report.
+      const needNotes = unique.lines.filter((l) => l.url && !splitSuffix(l.suffix).note).length;
+      const off = leave.get(member.id);
+      const leaveHours = off?.status === 'holiday' ? (off.hours ?? 8) : 0;
+      const evening = column === 'evening';
+      // Tasks still in progress move on from the % last reported on them.
+      const prev = evening
+        ? await reports.lastProgress(member.id, date, unique.lines.flatMap((l) => (l.url ? [l.url] : [])))
+        : new Map<string, number>();
+      const final = annotateLines(
+        unique.lines,
+        workNotes(member.position ?? 'dev', date, member.id, needNotes),
+        evening ? splitHours(randomDayHours(leaveHours), unique.lines.length) : undefined,
+        evening
+          ? (i) => {
+              const url = unique.lines[i].url;
+              return nextProgress(url ? prev.get(teamwork.canonicalTaskUrl(url) ?? url) : undefined);
+            }
+          : undefined,
+      );
+      const text = cellText(final);
       if (run.opts.dryRun) {
         out.push({ ...item, action: 'planned', source, change: unique.change, text });
         continue;
       }
-      await wip.writeRichLines(date, member, column, unique.lines, run.session);
+      await wip.writeRichLines(date, member, column, final, run.session);
       // Keep the system in step with the sheet; a failure here doesn't undo the sheet write.
       let report: AutoWipItem['report'];
       try {
-        report = await reports.saveAutoWip(member, date, unique.lines);
+        report = await reports.saveAutoWip(member, date, final);
       } catch (err) {
         console.warn(`Auto WIP: report not saved for ${member.name} ${date}: ${err}`);
         report = 'failed';

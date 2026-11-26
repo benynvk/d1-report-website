@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   entriesFromLines,
+  workNotes,
+  nextProgress,
+  annotateLines,
+  randomDayHours,
+  splitHours,
+  WORK_NOTES,
   type BoardTask,
   cellText,
   eveningFromMorning,
@@ -157,12 +163,105 @@ describe('entriesFromLines', () => {
         types,
       ),
     ).toEqual([
-      { taskName: 'Login API', href: 'https://x/tasks/1', hours: 0, inProgress: true },
-      { taskName: 'Meeting', href: null, hours: 0, inProgress: false },
-      { taskName: 'Other - Review code', href: null, hours: 0, inProgress: false },
+      { taskName: 'Login API', href: 'https://x/tasks/1', hours: 0, inProgress: true, progress: null },
+      { taskName: 'Meeting', href: null, hours: 0, inProgress: false, progress: null },
+      { taskName: 'Other - Review code', href: null, hours: 0, inProgress: false, progress: null },
     ]);
   });
   it('drops free text when there is no Other type', () => {
     expect(entriesFromLines([{ display: 'Smoke test' }], new Set())).toEqual([]);
+  });
+});
+
+describe('workNotes', () => {
+  it('gives distinct notes within a report', () => {
+    const n = workNotes('dev', '2026-11-26', 'm1', 5);
+    expect(new Set(n).size).toBe(5);
+    n.forEach((x) => expect(WORK_NOTES.dev).toContain(x));
+  });
+  it('does not repeat the previous working day, across a weekend', () => {
+    for (const [prev, next] of [['2026-11-26', '2026-11-27'], ['2026-11-27', '2026-11-30']]) {
+      const a = workNotes('tester', prev, 'm1', 3);
+      const b = workNotes('tester', next, 'm1', 3);
+      expect(b.filter((x) => a.includes(x))).toEqual([]);
+    }
+  });
+  it('is stable for the same member and day', () => {
+    expect(workNotes('dev', '2026-11-26', 'm1', 2)).toEqual(workNotes('dev', '2026-11-26', 'm1', 2));
+  });
+  it('annotates lines and reads the notes back into entries', () => {
+    const lines = annotateLines(
+      [
+        { display: 'Login API', url: 'https://x/tasks/1', suffix: ' => In progress' },
+        { display: 'Signup', url: 'https://x/tasks/2', suffix: ': typed by me => In progress' },
+        { display: 'Meeting' },
+      ],
+      ['Write unit tests'],
+      [3.5, 3, 1.2],
+    );
+    expect(cellText(lines)).toBe(
+      'Login API: Write unit tests (3.5h) => In progress\nSignup: typed by me (3h) => In progress\nMeeting (1.2h)',
+    );
+    expect(entriesFromLines(lines, new Set(['meeting']))).toEqual([
+      { taskName: 'Write unit tests', href: 'https://x/tasks/1', hours: 3.5, inProgress: true, progress: null },
+      { taskName: 'typed by me', href: 'https://x/tasks/2', hours: 3, inProgress: true, progress: null },
+      { taskName: 'Meeting', href: null, hours: 1.2, inProgress: false, progress: null },
+    ]);
+  });
+  it('keeps a morning note through the evening', () => {
+    const morning = annotateLines([{ display: 'Login API', url: 'https://x/tasks/1' }], ['Design database schema']);
+    const evening = annotateLines(eveningFromMorning(morning), ['Other note'], [7.6], () => 45);
+    expect(cellText(evening)).toBe('Login API: Design database schema (7.6h) => In progress (45%)');
+    expect(entriesFromLines(evening, new Set())).toEqual([
+      { taskName: 'Design database schema', href: 'https://x/tasks/1', hours: 7.6, inProgress: true, progress: 45 },
+    ]);
+  });
+  it('keeps the day total when a line cannot be recorded', () => {
+    const lines = annotateLines(
+      [{ display: 'Login API', url: 'https://x/tasks/1' }, { display: 'Review code' }],
+      ['Write unit tests'],
+      [5, 2.6],
+    );
+    expect(entriesFromLines(lines, new Set()).map((e) => e.hours)).toEqual([7.6]);
+  });
+  it('moves progress forward from the last report', () => {
+    for (let i = 0; i < 200; i++) {
+      const fresh = nextProgress(undefined);
+      expect(fresh % 5).toBe(0);
+      expect(fresh).toBeGreaterThanOrEqual(20);
+      expect(fresh).toBeLessThanOrEqual(60);
+      const later = nextProgress(50);
+      expect(later).toBeGreaterThanOrEqual(60);
+      expect(later).toBeLessThanOrEqual(75);
+      expect(nextProgress(90)).toBe(95);
+    }
+  });
+});
+
+describe('evening hours', () => {
+  it('keeps the day total in 7.3-8.5h, about 20% at 8h or more', () => {
+    let long = 0;
+    for (let i = 0; i < 5000; i++) {
+      const t = randomDayHours();
+      expect(t).toBeGreaterThanOrEqual(7.3);
+      expect(t).toBeLessThanOrEqual(8.5);
+      if (t >= 8) long++;
+    }
+    expect(long / 5000).toBeGreaterThan(0.17);
+    expect(long / 5000).toBeLessThan(0.23);
+  });
+  it('takes partial leave off the day', () => {
+    const t = randomDayHours(4, () => 0.5);
+    expect(t).toBeCloseTo(3.6);
+  });
+  it('splits a total exactly, 0.5h minimum per task', () => {
+    for (let i = 0; i < 500; i++) {
+      const total = randomDayHours();
+      const n = 1 + (i % 5);
+      const parts = splitHours(total, n);
+      expect(parts).toHaveLength(n);
+      expect(Math.round(parts.reduce((a, b) => a + b, 0) * 10)).toBe(Math.round(total * 10));
+      parts.forEach((p) => expect(p).toBeGreaterThanOrEqual(0.5));
+    }
   });
 });

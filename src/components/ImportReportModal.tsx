@@ -7,7 +7,7 @@ import { Loading, Spinner } from './Spinner';
 import { Avatar } from './Avatar';
 import { ReportDateField } from './ReportDateField';
 import { CloseIcon } from './icons';
-import { addDays, formatDate, formatDayLong, formatHours, todayVN } from '@/lib/format';
+import { addDays, formatDate, formatDayLong, formatHours, taskNote, todayVN } from '@/lib/format';
 import type { DailyReport, Member, MemberRole, ReportConfig, WipSyncResult } from '@/lib/types';
 
 /**
@@ -117,7 +117,8 @@ function rowsFromReport(report: DailyReport, allowed: string[], keepHours: boole
     if (e.href) {
       return makeRow({
         text: e.href,
-        note: (e.taskName ?? '').trim().replace(/^[-–]\s*/, ''),
+        // Unresolved title: keep the stored text so nothing is lost.
+        note: e.resolvedTitle ? taskNote(e) : (e.taskName ?? '').trim().replace(/^[-–]\s*/, ''),
         hours,
         inProgress: keepHours ? e.inProgress : false,
         progress: keepHours && e.progress != null ? String(e.progress) : '',

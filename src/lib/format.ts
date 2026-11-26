@@ -18,7 +18,17 @@ export function taskLabel(e: {
  * of its label.
  */
 export function taskNote(e: { resolvedTitle?: string | null; taskName?: string | null; href?: string | null }): string {
-  return e.href && e.resolvedTitle?.trim() ? (e.taskName ?? '').trim().replace(/^[-–]\s*/, '') : '';
+  const title = e.resolvedTitle?.trim();
+  if (!e.href || !title) return '';
+  const note = (e.taskName ?? '').trim().replace(/^[-–]\s*/, '');
+  // Auto-WIP used to store the task's own title as its note: that's not a note.
+  return sameText(note, title) ? '' : note;
+}
+
+/** Case- and whitespace-insensitive equality. */
+export function sameText(a: string, b: string): boolean {
+  const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+  return norm(a) === norm(b);
 }
 
 /** "In progress" / "In progress (40%)" for a task left unfinished. */

@@ -1,4 +1,4 @@
-import { eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { config } from '../config';
 import { isIsoDate, todayLocal } from '../date';
 import { db, schema } from '../db';
@@ -6,6 +6,7 @@ import type { DailyReportRow, Member, ReportEntry, ReportSource } from '../db/sc
 import { badRequest, notFound } from '../http';
 import { parseReport, type ParsedEntry } from '../parser';
 import { entriesFromLines, type CellLine } from './auto-wip-rules';
+import { sameText } from '../../lib/format';
 import * as members from './members';
 import { getActiveProjectId } from './projects';
 import * as taskTypes from './task-types';
@@ -218,7 +219,8 @@ export async function upsert(input: {
       .values(
         entries.map((e, i) => ({
           reportId,
-          taskName: e.taskName,
+          // A linked task's taskName is its note; drop it when it just repeats the title.
+          taskName: e.href && titles[i] && sameText(e.taskName, titles[i]!) ? '' : e.taskName,
           hours: e.hours,
           href: e.href,
           resolvedTitle: titles[i] ?? null,
@@ -287,12 +289,41 @@ export type AutoWipSave = 'saved' | 'kept-report' | 'nothing-to-save';
  * day (source 'auto-wip'). A report the member made themselves is never
  * replaced; an earlier auto-WIP one is (the evening run updates the morning's).
  */
-export async function saveAutoWip(member: Member, date: string, lines: CellLine[]): Promise<AutoWipSave> {
+/**
+ * The last % a member reported on each of these tasks before `date`, for
+ * tasks that were still in progress then (auto-WIP moves them forward).
+ */
+export async function lastProgress(memberId: string, date: string, hrefs: string[]): Promise<Map<string, number>> {
+  const urls = [...new Set(hrefs.map((h) => teamwork.canonicalTaskUrl(h)).filter((h): h is string => !!h))];
+  const out = new Map<string, number>();
+  if (!urls.length) return out;
+  const rows = await db()
+    .select({ href: reportEntries.href, progress: reportEntries.progress, inProgress: reportEntries.inProgress })
+    .from(reportEntries)
+    .innerJoin(dailyReports, eq(reportEntries.reportId, dailyReports.id))
+    .where(and(eq(dailyReports.memberId, memberId), lt(dailyReports.date, date), inArray(reportEntries.href, urls)))
+    .orderBy(desc(dailyReports.date));
+  const seen = new Set<string>();
+  for (const r of rows) {
+    // Only the latest report per task counts; "Done" or no % there means start over.
+    if (!r.href || seen.has(r.href)) continue;
+    seen.add(r.href);
+    if (r.inProgress && r.progress != null) out.set(r.href, r.progress);
+  }
+  return out;
+}
+
+export async function saveAutoWip(
+  member: Member,
+  date: string,
+  lines: CellLine[],
+): Promise<AutoWipSave> {
   const existing = await db().query.dailyReports.findFirst({
     where: (r, { and, eq: is }) => and(is(r.memberId, member.id), is(r.date, date)),
     columns: { source: true },
   });
   if (existing && existing.source !== 'auto-wip') return 'kept-report';
+  // Notes and hours come from the lines themselves (see annotateLines).
   const entries = entriesFromLines(lines, await taskTypes.getAllowedSet());
   if (!entries.length) return 'nothing-to-save';
   const rawText = lines.map((l) => `${l.prefix ?? ''}${l.display}${l.suffix ?? ''}`).join('\n');

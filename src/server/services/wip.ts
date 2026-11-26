@@ -10,6 +10,7 @@ import * as members from './members';
 import { getActiveProject, getActiveProjectId, update as updateProject } from './projects';
 import type { SheetCell } from './auto-wip-rules';
 import * as teamwork from './teamwork';
+import { taskNote } from '../../lib/format';
 
 const { wipConfigs } = schema;
 
@@ -650,8 +651,7 @@ export async function syncReport(
   const column = wipColumnFor(report.date);
   // A linked task's note ("finished login API, writing tests") is what was
   // actually done — it goes right after the title.
-  const noteOf = (e: ReportEntry) =>
-    e.href && e.resolvedTitle?.trim() ? (e.taskName ?? '').trim().replace(/^[-–]\s*/, '') : '';
+  const noteOf = (e: ReportEntry) => taskNote(e);
   const lines: RichLine[] = tasks.map((e) => ({
     // An "Other" task shows just its note: "Other - Check DNS records" -> "Check DNS records".
     display:

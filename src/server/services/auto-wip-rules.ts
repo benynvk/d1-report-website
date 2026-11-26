@@ -19,6 +19,91 @@ export const FILLER_TASK: Record<MemberPosition, string> = {
   tester: 'Smoke test',
 };
 
+/**
+ * What was done on a linked task (its report "Detail"), rotated per working
+ * day so the same task doesn't get the same note day after day.
+ */
+export const WORK_NOTES: Record<MemberPosition, string[]> = {
+  dev: [
+    'Analyze requirements',
+    'Design database schema',
+    'Implement API endpoints',
+    'Build UI components',
+    'Integrate API with frontend',
+    'Fix bugs from feedback',
+    'Handle edge cases and validation',
+    'Write unit tests',
+    'Refactor and optimize code',
+    'Address code review comments',
+  ],
+  tester: [
+    'Analyze requirements',
+    'Write test cases',
+    'Prepare test data',
+    'Execute functional tests',
+    'Test API endpoints',
+    'Log and report bugs',
+    'Retest fixed bugs',
+    'Run regression tests',
+    'Check UI on different devices',
+    'Update test report',
+  ],
+};
+
+/** Working days (Mon-Fri) since 1970; a weekend counts as the next Monday. */
+function workingDayIndex(dateIso: string): number {
+  const d = Math.floor(Date.parse(`${dateIso}T00:00:00Z`) / 86_400_000) + 3; // 0 = a Monday
+  return Math.floor(d / 7) * 5 + Math.min(((d % 7) + 7) % 7, 5);
+}
+
+/**
+ * `count` distinct notes for one member's report on `date`. Each working day
+ * shifts the rotation by 3, so up to 3 tasks never repeat the previous
+ * working day's notes; the member seed keeps teammates out of lockstep.
+ */
+export function workNotes(position: MemberPosition, date: string, seed: string, count: number): string[] {
+  const list = WORK_NOTES[position] ?? WORK_NOTES.dev;
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const offset = (workingDayIndex(date) * 3 + h) % list.length;
+  return Array.from({ length: Math.min(count, list.length) }, (_, i) => list[(offset + i) % list.length]);
+}
+
+// ---------- Evening hours ----------
+
+/** Total hours an evening auto-WIP logs: 7.3-7.9h, or 8.0-8.5h one time in five. */
+export const DAY_HOURS = { min: 7.3, max: 8.5, longFrom: 8, longShare: 0.2 };
+
+/** A random day total, in 0.1h steps (see DAY_HOURS), less any partial leave. */
+export function randomDayHours(leaveHours = 0, rand: () => number = Math.random): number {
+  const { min, max, longFrom, longShare } = DAY_HOURS;
+  const [lo, hi] = rand() < longShare ? [longFrom, max] : [min, longFrom - 0.1];
+  const tenths = Math.round(lo * 10) + Math.floor(rand() * (Math.round((hi - lo) * 10) + 1));
+  return Math.max(0, tenths - Math.round(leaveHours * 10)) / 10;
+}
+
+/** Splits `total` over `n` tasks at random, 0.1h steps, at least 0.5h each when it fits. */
+export function splitHours(total: number, n: number, rand: () => number = Math.random): number[] {
+  if (n <= 0) return [];
+  const all = Math.round(total * 10);
+  const floor = Math.min(5, Math.floor(all / n));
+  const spare = all - floor * n;
+  const weights = Array.from({ length: n }, () => 0.3 + rand());
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const parts = weights.map((w) => floor + Math.floor((spare * w) / sum));
+  for (let left = all - parts.reduce((a, b) => a + b, 0); left > 0; left--) parts[Math.floor(rand() * n)]++;
+  return parts.map((t) => t / 10);
+}
+
+/**
+ * % complete for a task still in progress tonight: up 10-25% on its last
+ * in-progress report, else 20-60%; multiples of 5, at most 95.
+ */
+export function nextProgress(previous: number | null | undefined, rand: () => number = Math.random): number {
+  const step = (lo: number, hi: number) => lo + 5 * Math.floor(rand() * ((hi - lo) / 5 + 1));
+  return previous != null ? Math.min(95, Math.max(previous, 0) + step(10, 25)) : step(20, 60);
+}
+
 /** Most auto-picked Teamwork tasks for a morning WIP. */
 export const MAX_PICKED_TASKS = 2;
 
@@ -108,6 +193,7 @@ export interface AutoReportEntry {
   href: string | null;
   hours: number;
   inProgress: boolean;
+  progress: number | null;
 }
 
 /**
@@ -118,20 +204,75 @@ export interface AutoReportEntry {
  */
 export function entriesFromLines(lines: CellLine[], allowedTypes: Set<string>): AutoReportEntry[] {
   const out: AutoReportEntry[] = [];
+  let droppedHours = 0;
   for (const l of lines) {
     const whole = `${l.display}${l.suffix ?? ''}`;
     const inProgress = /=>\s*in progress/i.test(whole);
+    const pct = /=>\s*in progress\s*\((\d{1,2})%\)/i.exec(whole);
+    const progress = inProgress && pct ? Number(pct[1]) : null;
     const name = l.display.replace(/\s*=>.*$/, '').trim();
     if (!name) continue;
+    const { note, hours } = splitSuffix(l.suffix);
+    const entry = { hours, inProgress, progress };
     if (l.url) {
-      out.push({ taskName: name, href: l.url, hours: 0, inProgress });
+      out.push({ taskName: note || name, href: l.url, ...entry });
       continue;
     }
     const bare = name.replace(/^other\s+-\s+/i, '');
-    if (allowedTypes.has(bare.toLowerCase())) out.push({ taskName: bare, href: null, hours: 0, inProgress });
-    else if (allowedTypes.has('other')) out.push({ taskName: `Other - ${bare}`, href: null, hours: 0, inProgress });
+    if (allowedTypes.has(bare.toLowerCase())) out.push({ taskName: bare, href: null, ...entry });
+    else if (allowedTypes.has('other')) out.push({ taskName: `Other - ${bare}`, href: null, ...entry });
+    else droppedHours += hours;
+  }
+  // A line the project can't record still counts toward the day: its time
+  // goes to the longest task, so the report adds up to the cell.
+  if (droppedHours && out.length) {
+    const top = out.reduce((a, b) => (b.hours > a.hours ? b : a));
+    top.hours = Math.round((top.hours + droppedHours) * 10) / 10;
   }
   return out;
+}
+
+/**
+ * A line's suffix as written by annotateLines / the report mirror:
+ * ": <note> (<hours>h) => <status>", every part optional.
+ */
+export function splitSuffix(suffix: string | undefined): { note: string; hours: number; status: string } {
+  let rest = suffix ?? '';
+  const arrow = rest.indexOf('=>');
+  const status = arrow === -1 ? '' : ` ${rest.slice(arrow).trim()}`;
+  if (arrow !== -1) rest = rest.slice(0, arrow);
+  let hours = 0;
+  rest = rest.replace(/\s*\((\d+(?:\.\d+)?)h\)\s*$/i, (_, h: string) => {
+    hours = Number(h);
+    return '';
+  });
+  const note = rest.replace(/^\s*:\s*/, '').trim();
+  return { note, hours, status };
+}
+
+/**
+ * Adds what was done (and, in the evening, how long and how far) to each
+ * line, in the report mirror's format: "- Task: <note> (<h>h) => In progress (<p>%)".
+ * A linked line keeps a note it already has (one typed in the morning), else
+ * takes the next of `notes`; `hours` (one per line) replaces any hours there;
+ * `progress(i)` gives the % for an in-progress line that has none yet.
+ */
+export function annotateLines(
+  lines: CellLine[],
+  notes: string[],
+  hours?: number[],
+  progress?: (i: number) => number,
+): CellLine[] {
+  let next = 0;
+  return lines.map((l, i) => {
+    const cur = splitSuffix(l.suffix);
+    const note = l.url ? cur.note || notes[next++] || '' : cur.note;
+    const h = hours ? hours[i] : cur.hours;
+    const status =
+      progress && /^\s*=>\s*in progress\s*$/i.test(cur.status) ? ` => In progress (${progress(i)}%)` : cur.status;
+    const suffix = `${note ? `: ${note}` : ''}${h ? ` (${Math.round(h * 100) / 100}h)` : ''}${status}`;
+    return { ...l, suffix: suffix || undefined };
+  });
 }
 
 // ---------- Reading a rich cell ----------
