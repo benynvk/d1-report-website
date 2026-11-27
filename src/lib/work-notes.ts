@@ -15,6 +15,11 @@ export const WORK_NOTES: Record<'dev' | 'tester', string[]> = {
     'Write unit tests',
     'Refactor and optimize code',
     'Address code review comments',
+    'Investigate and debug issues',
+    'Set up environment and configuration',
+    'Deploy to staging',
+    'Improve performance',
+    'Write technical documentation',
   ],
   tester: [
     'Analyze requirements',
@@ -28,5 +33,10 @@ export const WORK_NOTES: Record<'dev' | 'tester', string[]> = {
     'Run regression tests',
     'Check UI on different devices',
     'Update test report',
+    'Verify fixes on staging',
+    'Run smoke tests before release',
+    'Test edge cases and error handling',
+    'Write test documentation',
+    'Review requirements for testability',
   ],
 };

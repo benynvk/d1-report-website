@@ -2381,6 +2381,20 @@ label {
 .note-cell {
   min-width: 0;
 }
+/* As wide as the longest note, one line each. */
+.note-cell .select-menu.note-menu {
+  right: auto;
+  width: max-content;
+  max-width: min(420px, 90vw);
+}
+.note-menu .select-opt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.note-menu .select-opt.note-used {
+  color: var(--muted);
+}
 .input-wrap .spinner {
   position: absolute;
   right: 10px;

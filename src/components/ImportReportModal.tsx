@@ -422,9 +422,11 @@ export function ImportReportModal({
     const used = new Set(rows.filter((o) => o.key !== r.key).map((o) => o.note.trim().toLowerCase()));
     const all = WORK_NOTES[member?.position ?? 'dev'] ?? WORK_NOTES.dev;
     if (all.some((n) => n.toLowerCase() === q)) return []; // already picked
-    // Notes other rows already use go last, so each task reads differently.
-    const hits = all.filter((n) => n.toLowerCase().includes(q));
-    return [...hits.filter((n) => !used.has(n.toLowerCase())), ...hits.filter((n) => used.has(n.toLowerCase()))];
+    // A to Z; notes other rows already use are greyed (see note-used).
+    return all
+      .filter((n) => n.toLowerCase().includes(q))
+      .sort((a, b) => a.localeCompare(b))
+      .map((n) => ({ note: n, used: used.has(n.toLowerCase()) }));
   };
   const noteMenuOpen = (r: RowState) => noteSuggest?.key === r.key && noteSuggestionsFor(r).length > 0;
   const chooseNote = (key: string, note: string) => {
@@ -442,7 +444,7 @@ export function ImportReportModal({
       }
       if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        chooseNote(r.key, list[Math.min(noteSuggest.index, list.length - 1)]);
+        chooseNote(r.key, list[Math.min(noteSuggest.index, list.length - 1)].note);
         return;
       }
       if (e.key === 'Escape') {
@@ -689,13 +691,14 @@ export function ImportReportModal({
                         placeholder="e.g. finished login API, writing tests"
                       />
                       {noteMenuOpen(r) && (
-                        <div className="select-menu" role="listbox">
-                          {noteSuggestionsFor(r).map((n, i) => (
+                        <div className="select-menu note-menu" role="listbox">
+                          {noteSuggestionsFor(r).map(({ note: n, used }, i) => (
                             <div
                               key={n}
                               role="option"
                               aria-selected={i === noteSuggest?.index}
-                              className={`select-opt${i === noteSuggest?.index ? ' active' : ''}`}
+                              title={used ? 'Already used on another task' : undefined}
+                              className={`select-opt${i === noteSuggest?.index ? ' active' : ''}${used ? ' note-used' : ''}`}
                               // mousedown, not click: keeps focus so blur doesn't close the menu first
                               onMouseDown={(e) => {
                                 e.preventDefault();
