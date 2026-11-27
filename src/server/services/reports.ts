@@ -5,7 +5,7 @@ import { db, schema } from '../db';
 import type { DailyReportRow, Member, ReportEntry, ReportSource } from '../db/schema';
 import { badRequest, notFound } from '../http';
 import { parseReport, type ParsedEntry } from '../parser';
-import { entriesFromLines, type CellLine } from './auto-wip-rules';
+import { entriesFromLines, splitSuffix, type CellLine } from './auto-wip-rules';
 import { sameText } from '../../lib/format';
 import * as members from './members';
 import { getActiveProjectId } from './projects';
@@ -285,11 +285,6 @@ export async function importManual(dto: {
 export type AutoWipSave = 'saved' | 'kept-report' | 'nothing-to-save';
 
 /**
- * Records what auto-WIP wrote to the sheet as the member's report for that
- * day (source 'auto-wip'). A report the member made themselves is never
- * replaced; an earlier auto-WIP one is (the evening run updates the morning's).
- */
-/**
  * The last % a member reported on each of these tasks before `date`, for
  * tasks that were still in progress then (auto-WIP moves them forward).
  */
@@ -313,6 +308,13 @@ export async function lastProgress(memberId: string, date: string, hrefs: string
   return out;
 }
 
+/**
+ * Records what auto-WIP wrote to the sheet as the member's report for that
+ * day (source 'auto-wip'). An earlier auto-WIP report is replaced (the evening
+ * run updates the morning's), and so is one the member saved without any
+ * hours yet (a plan, not a log) — its details are kept for tasks the cell
+ * has no detail for. A report with hours is the member's own and stays.
+ */
 export async function saveAutoWip(
   member: Member,
   date: string,
@@ -320,12 +322,25 @@ export async function saveAutoWip(
 ): Promise<AutoWipSave> {
   const existing = await db().query.dailyReports.findFirst({
     where: (r, { and, eq: is }) => and(is(r.memberId, member.id), is(r.date, date)),
-    columns: { source: true },
+    columns: { id: true, source: true },
   });
-  if (existing && existing.source !== 'auto-wip') return 'kept-report';
+  const kept = existing
+    ? await db()
+        .select({ href: reportEntries.href, taskName: reportEntries.taskName, hours: reportEntries.hours })
+        .from(reportEntries)
+        .where(eq(reportEntries.reportId, existing.id))
+    : [];
+  if (existing && existing.source !== 'auto-wip' && kept.some((e) => e.hours > 0)) return 'kept-report';
   // Notes and hours come from the lines themselves (see annotateLines).
   const entries = entriesFromLines(lines, await taskTypes.getAllowedSet());
   if (!entries.length) return 'nothing-to-save';
+  // A linked task the cell gives no detail keeps the one already reported.
+  const notes = new Map(kept.filter((e) => e.href && e.taskName.trim()).map((e) => [e.href!, e.taskName]));
+  for (const e of entries) {
+    const url = teamwork.canonicalTaskUrl(e.href);
+    const linkTitleOnly = e.href && !lines.some((l) => l.url === e.href && splitSuffix(l.suffix).note);
+    if (url && linkTitleOnly && notes.has(url)) e.taskName = notes.get(url)!;
+  }
   const rawText = lines.map((l) => `${l.prefix ?? ''}${l.display}${l.suffix ?? ''}`).join('\n');
   await upsert({ member, date, rawText, source: 'auto-wip', entries });
   return 'saved';
