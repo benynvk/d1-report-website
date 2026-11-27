@@ -11,6 +11,8 @@ export interface CellLine {
   suffix?: string;
 }
 
+import { WORK_NOTES } from '../../lib/work-notes';
+
 export type MemberPosition = 'dev' | 'tester';
 
 /** What a member adds when every ordering of their tasks was already used. */
@@ -23,32 +25,7 @@ export const FILLER_TASK: Record<MemberPosition, string> = {
  * What was done on a linked task (its report "Detail"), rotated per working
  * day so the same task doesn't get the same note day after day.
  */
-export const WORK_NOTES: Record<MemberPosition, string[]> = {
-  dev: [
-    'Analyze requirements',
-    'Design database schema',
-    'Implement API endpoints',
-    'Build UI components',
-    'Integrate API with frontend',
-    'Fix bugs from feedback',
-    'Handle edge cases and validation',
-    'Write unit tests',
-    'Refactor and optimize code',
-    'Address code review comments',
-  ],
-  tester: [
-    'Analyze requirements',
-    'Write test cases',
-    'Prepare test data',
-    'Execute functional tests',
-    'Test API endpoints',
-    'Log and report bugs',
-    'Retest fixed bugs',
-    'Run regression tests',
-    'Check UI on different devices',
-    'Update test report',
-  ],
-};
+export { WORK_NOTES };
 
 /** Working days (Mon-Fri) since 1970; a weekend counts as the next Monday. */
 function workingDayIndex(dateIso: string): number {

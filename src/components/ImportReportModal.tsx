@@ -8,6 +8,7 @@ import { Avatar } from './Avatar';
 import { ReportDateField } from './ReportDateField';
 import { CloseIcon } from './icons';
 import { addDays, formatDate, formatDayLong, formatHours, taskNote, todayVN } from '@/lib/format';
+import { WORK_NOTES } from '@/lib/work-notes';
 import type { DailyReport, Member, MemberRole, ReportConfig, WipSyncResult } from '@/lib/types';
 
 /**
@@ -414,6 +415,45 @@ export function ImportReportModal({
     onRowKey(r, e);
   };
 
+  // ---------- Detail suggestions (what was done, by the member's position) ----------
+  const [noteSuggest, setNoteSuggest] = useState<{ key: string; index: number } | null>(null);
+  const noteSuggestionsFor = (r: RowState) => {
+    const q = r.note.trim().toLowerCase();
+    const used = new Set(rows.filter((o) => o.key !== r.key).map((o) => o.note.trim().toLowerCase()));
+    const all = WORK_NOTES[member?.position ?? 'dev'] ?? WORK_NOTES.dev;
+    if (all.some((n) => n.toLowerCase() === q)) return []; // already picked
+    // Notes other rows already use go last, so each task reads differently.
+    const hits = all.filter((n) => n.toLowerCase().includes(q));
+    return [...hits.filter((n) => !used.has(n.toLowerCase())), ...hits.filter((n) => used.has(n.toLowerCase()))];
+  };
+  const noteMenuOpen = (r: RowState) => noteSuggest?.key === r.key && noteSuggestionsFor(r).length > 0;
+  const chooseNote = (key: string, note: string) => {
+    updateRow(key, { note });
+    setNoteSuggest(null);
+  };
+  const onNoteKey = (r: RowState, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (noteMenuOpen(r) && noteSuggest) {
+      const list = noteSuggestionsFor(r);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setNoteSuggest({ key: r.key, index: (noteSuggest.index + step + list.length) % list.length });
+        return;
+      }
+      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        chooseNote(r.key, list[Math.min(noteSuggest.index, list.length - 1)]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.stopPropagation(); // close the menu, not the form
+        setNoteSuggest(null);
+        return;
+      }
+    }
+    onRowKey(r, e);
+  };
+
   // ---------- Derived ----------
   const filled = rows.filter((r) => !isBlank(r));
   const errors = new Map(filled.map((r) => [r.key, rowError(r, config)]));
@@ -633,12 +673,42 @@ export function ImportReportModal({
                       )}
                       {err && <div className="row-error">{err}</div>}
                     </div>
-                    <input
-                      value={r.note}
-                      onChange={(e) => updateRow(r.key, { note: e.target.value })}
-                      onKeyDown={(e) => onRowKey(r, e)}
-                      placeholder="e.g. finished login API, writing tests"
-                    />
+                    <div className="input-wrap note-cell">
+                      <input
+                        value={r.note}
+                        role="combobox"
+                        aria-expanded={noteMenuOpen(r)}
+                        aria-autocomplete="list"
+                        onFocus={() => setNoteSuggest({ key: r.key, index: 0 })}
+                        onChange={(e) => {
+                          updateRow(r.key, { note: e.target.value });
+                          setNoteSuggest({ key: r.key, index: 0 });
+                        }}
+                        onBlur={() => setNoteSuggest(null)}
+                        onKeyDown={(e) => onNoteKey(r, e)}
+                        placeholder="e.g. finished login API, writing tests"
+                      />
+                      {noteMenuOpen(r) && (
+                        <div className="select-menu" role="listbox">
+                          {noteSuggestionsFor(r).map((n, i) => (
+                            <div
+                              key={n}
+                              role="option"
+                              aria-selected={i === noteSuggest?.index}
+                              className={`select-opt${i === noteSuggest?.index ? ' active' : ''}`}
+                              // mousedown, not click: keeps focus so blur doesn't close the menu first
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                chooseNote(r.key, n);
+                              }}
+                              onMouseEnter={() => setNoteSuggest({ key: r.key, index: i })}
+                            >
+                              {n}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <input
                       type="number"
                       step="0.5"
